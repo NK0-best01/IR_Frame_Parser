@@ -88,13 +88,21 @@ def parse_raw(text: str) -> list[dict[str, Any]]:
     if type_match:
         type_ = norm(type_match.group(1))
     else:
+        # Match model only on the same line before SN (e.g. "Epson L5190 SN : ...", "1. Dell 3050 SN : ...")
+        # Do not span lines with \s, ignore item numbers like "1.", "1)", and ensure candidate has letters
         model_before_sn = re.search(
-            r"^(?:[*\s•-]*)([A-Za-z0-9][A-Za-z0-9\s._-]{2,40}?)\s+(?:S/?N|Serial(?:\s*Number)?)\s*[:：]",
+            r"^[*\s•-]*(?:\d+[.)]\s*)?([A-Za-z0-9ก-๙][A-Za-z0-9ก-๙ \t._-]{2,40}?)[ \t]+(?:S/?N|Serial(?:\s*Number)?)[ \t]*[:：]",
             joined_text,
             re.IGNORECASE | re.MULTILINE,
         )
         if model_before_sn:
-            type_ = norm(model_before_sn.group(1))
+            candidate = norm(model_before_sn.group(1))
+            if not re.match(r"^[\d\s-]+$", candidate) and any(c.isalpha() for c in candidate):
+                type_ = candidate
+            elif re.search(r"ทัชสกรีน|touch\s*screen", joined_text, re.IGNORECASE):
+                type_ = "Dell Optiplax 3050 AIO"
+            else:
+                type_ = ""
         elif re.search(r"ทัชสกรีน|touch\s*screen", joined_text, re.IGNORECASE):
             type_ = "Dell Optiplax 3050 AIO"
         else:
@@ -127,7 +135,7 @@ def parse_raw(text: str) -> list[dict[str, Any]]:
     for r in rows:
         if re.match(r"^\d[\d\s-]{8,}$", r["office"]):
             r["office"] = ""
-        if re.match(r"^\d{9,}$", r["type"]):
+        if re.match(r"^\d[\d\s-]{8,}$", r["type"]):
             r["type"] = ""
 
     return rows

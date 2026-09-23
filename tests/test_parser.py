@@ -109,3 +109,28 @@ Epson L5190 SN : X5NY048080
     assert r["type"] == "Epson L5190"
     assert r["status"] == "รออะไหล่"
 
+
+def test_item_numbered_sn_does_not_capture_phone_as_model():
+    text = """21/08/69
+
+แจ้งซ่อม 1 เครื่อง
+
+สขจ.กระบี่ 
+
+มะลิวัลย์  ชุมทอง 
+เจ้าพนักงานขนส่งปฏิบัติงาน
+088-7541163
+
+1. SN : JMHYVV2
+อาการ : ไม่บู้ทเข้า windows """
+
+    rows = parse_raw(text)
+    assert len(rows) == 1
+    r = rows[0]
+    assert r["sn"] == "JMHYVV2"
+    assert r["date"] == "21/08/2569"
+    assert r["office"] == "สขจ.กระบี่"
+    assert r["type"] == ""
+    assert "088" not in r["type"]
+
+
