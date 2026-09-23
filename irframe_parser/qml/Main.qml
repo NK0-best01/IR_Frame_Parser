@@ -360,62 +360,38 @@ ApplicationWindow {
                             }
                         }
 
-                        RowLayout {
+                        Rectangle {
                             Layout.fillWidth: true
-                            spacing: 8
+                            Layout.preferredHeight: 36
+                            radius: 6
+                            color: clearMouse.pressed ? "#cbd5e1" : (clearMouse.containsMouse ? "#e2e8f0" : "#f1f5f9")
+                            border.color: "#cbd5e1"
+                            border.width: 1
 
-                            Rectangle {
-                                Layout.fillWidth: true
-                                Layout.preferredHeight: 36
-                                radius: 6
-                                color: exampleMouse.pressed ? "#0f172a" : (exampleMouse.containsMouse ? "#334155" : "#1e293b")
-
+                            RowLayout {
+                                anchors.centerIn: parent
+                                spacing: 6
                                 Label {
-                                    anchors.centerIn: parent
-                                    text: "โหลดตัวอย่าง 15 เคส"
-                                    font.family: appFontFamily
-                                    font.bold: true
+                                    text: "🧹"
                                     font.pixelSize: 12
-                                    color: "#ffffff"
                                 }
-
-                                MouseArea {
-                                    id: exampleMouse
-                                    anchors.fill: parent
-                                    hoverEnabled: true
-                                    cursorShape: Qt.PointingHandCursor
-                                    onClicked: {
-                                        backendModel.load_example()
-                                    }
-                                }
-                            }
-
-                            Rectangle {
-                                Layout.fillWidth: true
-                                Layout.preferredHeight: 36
-                                radius: 6
-                                color: clearMouse.pressed ? "#cbd5e1" : (clearMouse.containsMouse ? "#e2e8f0" : "#f1f5f9")
-                                border.color: "#cbd5e1"
-                                border.width: 1
-
                                 Label {
-                                    anchors.centerIn: parent
                                     text: "ล้างกล่องข้อความ"
                                     font.family: appFontFamily
                                     font.bold: true
                                     font.pixelSize: 12
                                     color: "#475569"
                                 }
+                            }
 
-                                MouseArea {
-                                    id: clearMouse
-                                    anchors.fill: parent
-                                    hoverEnabled: true
-                                    cursorShape: Qt.PointingHandCursor
-                                    onClicked: {
-                                        rawTextArea.text = ""
-                                        rawTextArea.forceActiveFocus()
-                                    }
+                            MouseArea {
+                                id: clearMouse
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: {
+                                    rawTextArea.text = ""
+                                    rawTextArea.forceActiveFocus()
                                 }
                             }
                         }
