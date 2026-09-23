@@ -85,3 +85,27 @@ def test_parse_raw_returns_only_new_rows():
     # not inside parse_raw itself
     rows = parse_raw("SN : FFF6666")
     assert len(rows) == 1
+
+
+def test_parse_inline_sn_with_model_prefix():
+    text = """1/4/69
+
+***สาขาอำเภอทองผาภูมิ (จนท.ไม่สะดวกส่งvdo เบื้องต้นให้ค่ะ)
+
+Epson L5190 SN : X5NY048080
+
+อาการ : พิมพ์เอกสารไม่ได้ ไฟแดงขึ้นโชว์ ส่งเช็คเบื้องต้นร้านคอมพิวเตอร์ในพื้น สายแพร ช๊อต เมนบอร์ดช๊อต  
+
+ผู้แจ้ง กัลย์วสุ  ธนบูรณ์กาญจน์
+0861673593 เจ้าหน้าที่บันทึกข้อมูล
+ชั้น1 สำนักงานขนส่งจังหวัดกาญจนบุรี สาขาอำเภอทองผาภูมิ"""
+
+    rows = parse_raw(text)
+    assert len(rows) == 1
+    r = rows[0]
+    assert r["sn"] == "X5NY048080"
+    assert r["date"] == "01/04/2569"
+    assert r["office"] == "สาขาอำเภอทองผาภูมิ"
+    assert r["type"] == "Epson L5190"
+    assert r["status"] == "รออะไหล่"
+

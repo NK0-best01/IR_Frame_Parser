@@ -48,7 +48,7 @@ def parse_raw(text: str) -> list[dict[str, Any]]:
     # 1. Serial Number(s)
     sn_matches = list(
         re.finditer(
-            r"(?:^|\n)\s*(?:\d+\.\s*)?SN\s*[:：]\s*([A-Za-z0-9][A-Za-z0-9._-]{3,29})",
+            r"\b(?:S/?N|Serial(?:\s*Number)?)\s*[:：]\s*([A-Za-z0-9][A-Za-z0-9._-]{3,29})",
             joined_text,
             re.IGNORECASE,
         )
@@ -66,8 +66,9 @@ def parse_raw(text: str) -> list[dict[str, Any]]:
     )
     office = ""
     for line in lines:
-        if office_pattern.search(line):
-            office = line
+        cleaned = re.sub(r"^[\s*#•\-_]+", "", line).strip()
+        if office_pattern.search(cleaned):
+            office = re.sub(r"\s*[\(（][^()]*[\)）]\s*$", "", cleaned).strip()
             break
 
     # 4. Status
@@ -86,10 +87,18 @@ def parse_raw(text: str) -> list[dict[str, Any]]:
     )
     if type_match:
         type_ = norm(type_match.group(1))
-    elif re.search(r"ทัชสกรีน|touch\s*screen", joined_text, re.IGNORECASE):
-        type_ = "Dell Optiplax 3050 AIO"
     else:
-        type_ = ""
+        model_before_sn = re.search(
+            r"^(?:[*\s•-]*)([A-Za-z0-9][A-Za-z0-9\s._-]{2,40}?)\s+(?:S/?N|Serial(?:\s*Number)?)\s*[:：]",
+            joined_text,
+            re.IGNORECASE | re.MULTILINE,
+        )
+        if model_before_sn:
+            type_ = norm(model_before_sn.group(1))
+        elif re.search(r"ทัชสกรีน|touch\s*screen", joined_text, re.IGNORECASE):
+            type_ = "Dell Optiplax 3050 AIO"
+        else:
+            type_ = ""
 
     # Build rows: 1 row per SN, or 1 row with empty SN
     if sns:
