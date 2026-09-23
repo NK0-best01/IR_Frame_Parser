@@ -39,20 +39,20 @@ ApplicationWindow {
         interval: 450
         repeat: false
         onTriggered: {
-            var count = backendModel.check_expired_completed_count(30)
+            var count = backendModel.get_auto_deleted_count()
             if (count > 0) {
-                expiredCleanupDialog.expiredCount = count
-                expiredCleanupDialog.open()
+                autoCleanNotificationDialog.deletedCount = count
+                autoCleanNotificationDialog.open()
             }
         }
     }
 
     Dialog {
-        id: expiredCleanupDialog
-        property int expiredCount: 0
+        id: autoCleanNotificationDialog
+        property int deletedCount: 0
         modal: true
         anchors.centerIn: Overlay.overlay
-        width: 480
+        width: 460
         padding: 24
         dim: true
         closePolicy: Popup.CloseOnEscape
@@ -72,18 +72,18 @@ ApplicationWindow {
                     width: 44
                     height: 44
                     radius: 22
-                    color: expiredCleanupDialog.expiredCount > 0 ? "#fef2f2" : "#f0fdf4"
-                    border.color: expiredCleanupDialog.expiredCount > 0 ? "#fecaca" : "#bbf7d0"
+                    color: "#f0fdf4"
+                    border.color: "#bbf7d0"
                     Label {
                         anchors.centerIn: parent
-                        text: expiredCleanupDialog.expiredCount > 0 ? "🗑️" : "✅"
+                        text: "🧹"
                         font.pixelSize: 22
                     }
                 }
                 ColumnLayout {
                     spacing: 2
                     Label {
-                        text: expiredCleanupDialog.expiredCount > 0 ? "แจ้งเตือนการล้างรายการซ่อมเสร็จ" : "ตรวจสอบรายการซ่อมเสร็จ 30 วัน"
+                        text: "ระบบล้างข้อมูลอัตโนมัติ"
                         font.family: appFontFamily
                         font.bold: true
                         font.pixelSize: 16
@@ -107,9 +107,7 @@ ApplicationWindow {
             Label {
                 Layout.fillWidth: true
                 wrapMode: Label.WordWrap
-                text: expiredCleanupDialog.expiredCount > 0
-                    ? "พบรายการที่มีสถานะ <b>เสร็จแล้ว</b> และครบกำหนด 30 วัน จำนวน <b><font color='#dc2626'>" + expiredCleanupDialog.expiredCount + "</font></b> รายการ\n\nต้องการลบรายการเหล่านี้ออกจากระบบเพื่อลดความซ้ำซ้อนของข้อมูลหรือไม่?"
-                    : "ยอดเยี่ยม! ขณะนี้ <b>ยังไม่มี</b> รายการสถานะ 'เสร็จแล้ว' ที่ครบกำหนด 30 วันในระบบ"
+                text: "ระบบได้ทำการล้างรายการที่ซ่อม <b>เสร็จแล้ว</b> และครบกำหนด 30 วัน ออกจากระบบให้อัตโนมัติเรียบร้อยแล้ว จำนวน <b><font color='#0284c7'>" + autoCleanNotificationDialog.deletedCount + "</font></b> รายการ"
                 font.family: appFontFamily
                 font.pixelSize: 13
                 color: "#334155"
@@ -124,40 +122,14 @@ ApplicationWindow {
                 Item { Layout.fillWidth: true }
 
                 Rectangle {
-                    Layout.preferredWidth: expiredCleanupDialog.expiredCount > 0 ? 120 : 100
+                    Layout.preferredWidth: 110
                     Layout.preferredHeight: 38
                     radius: 8
-                    color: cancelMouse.pressed ? "#cbd5e1" : (cancelMouse.containsMouse ? "#e2e8f0" : "#f1f5f9")
-                    border.color: "#cbd5e1"
+                    color: okMouse.pressed ? "#0369a1" : (okMouse.containsMouse ? "#0284c7" : "#0284c7")
 
                     Label {
                         anchors.centerIn: parent
-                        text: expiredCleanupDialog.expiredCount > 0 ? "เก็บไว้ก่อน" : "ตกลง"
-                        font.family: appFontFamily
-                        font.bold: true
-                        font.pixelSize: 13
-                        color: "#475569"
-                    }
-
-                    MouseArea {
-                        id: cancelMouse
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: expiredCleanupDialog.close()
-                    }
-                }
-
-                Rectangle {
-                    visible: expiredCleanupDialog.expiredCount > 0
-                    Layout.preferredWidth: 160
-                    Layout.preferredHeight: 38
-                    radius: 8
-                    color: deleteConfirmMouse.pressed ? "#991b1b" : (deleteConfirmMouse.containsMouse ? "#dc2626" : "#ef4444")
-
-                    Label {
-                        anchors.centerIn: parent
-                        text: "ยืนยันลบรายการ (" + expiredCleanupDialog.expiredCount + ")"
+                        text: "รับทราบ"
                         font.family: appFontFamily
                         font.bold: true
                         font.pixelSize: 13
@@ -165,14 +137,11 @@ ApplicationWindow {
                     }
 
                     MouseArea {
-                        id: deleteConfirmMouse
+                        id: okMouse
                         anchors.fill: parent
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
-                        onClicked: {
-                            backendModel.confirm_delete_expired(30)
-                            expiredCleanupDialog.close()
-                        }
+                        onClicked: autoCleanNotificationDialog.close()
                     }
                 }
             }
@@ -744,43 +713,6 @@ ApplicationWindow {
 
                         Item { Layout.fillWidth: true }
 
-                        // 3. Clean Expired Button
-                        Rectangle {
-                            Layout.preferredWidth: 150
-                            Layout.preferredHeight: 38
-                            radius: 8
-                            color: cleanMouse.pressed ? "#e2e8f0" : (cleanMouse.containsMouse ? "#f1f5f9" : "#ffffff")
-                            border.color: "#cbd5e1"
-                            border.width: 1
-
-                            RowLayout {
-                                anchors.centerIn: parent
-                                spacing: 6
-                                Label {
-                                    text: "🧹"
-                                    font.pixelSize: 13
-                                }
-                                Label {
-                                    text: "ล้างเคสครบ 30 วัน"
-                                    font.family: appFontFamily
-                                    font.bold: true
-                                    font.pixelSize: 12
-                                    color: "#475569"
-                                }
-                            }
-
-                            MouseArea {
-                                id: cleanMouse
-                                anchors.fill: parent
-                                hoverEnabled: true
-                                cursorShape: Qt.PointingHandCursor
-                                onClicked: {
-                                    var count = backendModel.check_expired_completed_count(30)
-                                    expiredCleanupDialog.expiredCount = count
-                                    expiredCleanupDialog.open()
-                                }
-                            }
-                        }
 
                         // 4. Export Excel Button
                         Rectangle {

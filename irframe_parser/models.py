@@ -99,6 +99,7 @@ class RecordTableModel(QAbstractTableModel):
     def __init__(self, connection: sqlite3.Connection, parent: QObject | None = None) -> None:
         super().__init__(parent)
         self.conn = connection
+        self._auto_deleted_count: int = db.delete_expired_completed(self.conn, days=30)
         self._all_records: list[dict[str, Any]] = []
         self._records: list[dict[str, Any]] = []
         self._search_text: str = ""
@@ -413,3 +414,9 @@ class RecordTableModel(QAbstractTableModel):
         if deleted > 0:
             self._reload_records()
         return deleted
+
+    @Slot(result=int)
+    def get_auto_deleted_count(self) -> int:
+        """Return number of expired completed records auto-deleted on startup."""
+        return self._auto_deleted_count
+
