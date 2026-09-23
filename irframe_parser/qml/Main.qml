@@ -720,14 +720,16 @@ ApplicationWindow {
 
                         // 4. Export Excel Button
                         Rectangle {
-                            Layout.preferredWidth: 170
+                            Layout.preferredWidth: backendModel.selectedCount > 0 ? 180 : 170
                             Layout.preferredHeight: 38
                             radius: 8
                             color: exportMouse.pressed ? "#047857" : (exportMouse.containsMouse ? "#10b981" : "#059669")
 
                             Label {
                                 anchors.centerIn: parent
-                                text: "⬇ Export Excel (.xlsx)"
+                                text: backendModel.selectedCount > 0
+                                    ? "⬇ Export Excel (" + backendModel.selectedCount + ")"
+                                    : "⬇ Export Excel (ทั้งหมด)"
                                 font.family: appFontFamily
                                 font.bold: true
                                 font.pixelSize: 13

@@ -80,6 +80,7 @@ class RecordTableModel(QAbstractTableModel):
     SnRole = Qt.UserRole + 5
     TypeRole = Qt.UserRole + 6
     IdRole = Qt.UserRole + 7
+    SelectedRole = Qt.UserRole + 8
 
     COL_ROLES = {
         "no": NoRole,
@@ -95,12 +96,15 @@ class RecordTableModel(QAbstractTableModel):
     hasMissingSnChanged = Signal(bool)
     sortColumnChanged = Signal(str)
     sortAscendingChanged = Signal(bool)
+    selectedCountChanged = Signal(int)
+    allSelectedChanged = Signal(bool)
 
     def __init__(self, connection: sqlite3.Connection, parent: QObject | None = None) -> None:
         super().__init__(parent)
         self.conn = connection
         self._all_records: list[dict[str, Any]] = []
         self._records: list[dict[str, Any]] = []
+        self._selected_ids: set[int] = set()
         self._search_text: str = ""
         self._row_limit: int = 10  # Default 10 rows
         self._sort_col: str = "no"  # Default sort by sequence number (ลำดับ)
@@ -150,9 +154,20 @@ class RecordTableModel(QAbstractTableModel):
         self.endResetModel()
 
     def _reload_records(self) -> None:
+        prev_ids = {r["id"] for r in self._all_records} if self._all_records else set()
         self._all_records = db.list_all(self.conn)
+        new_ids = {r["id"] for r in self._all_records}
+
+        if not prev_ids:
+            self._selected_ids = set(new_ids)
+        else:
+            added_ids = new_ids - prev_ids
+            self._selected_ids = (self._selected_ids & new_ids) | added_ids
+
         self._apply_filter_and_sort()
         self._emit_stats()
+        self.selectedCountChanged.emit(len(self._selected_ids))
+        self.allSelectedChanged.emit(self.allSelected)
 
     def _emit_stats(self) -> None:
         total = len(self._all_records)
@@ -174,8 +189,16 @@ class RecordTableModel(QAbstractTableModel):
     def get_sort_asc(self) -> bool:
         return self._sort_asc
 
+    def get_selected_count(self) -> int:
+        return len(self._selected_ids)
+
+    def get_all_selected(self) -> bool:
+        return len(self._all_records) > 0 and len(self._selected_ids) == len(self._all_records)
+
     sortColumn = Property(str, get_sort_col, notify=sortColumnChanged)
     sortAscending = Property(bool, get_sort_asc, notify=sortAscendingChanged)
+    selectedCount = Property(int, get_selected_count, notify=selectedCountChanged)
+    allSelected = Property(bool, get_all_selected, notify=allSelectedChanged)
 
     def rowCount(self, parent: QModelIndex = QModelIndex()) -> int:
         return len(self._records)
@@ -198,6 +221,7 @@ class RecordTableModel(QAbstractTableModel):
             self.SnRole: b"sn",
             self.TypeRole: b"type",
             self.IdRole: b"rowId",
+            self.SelectedRole: b"selected",
         }
 
     def data(self, index: QModelIndex, role: int = Qt.DisplayRole) -> Any:
@@ -225,12 +249,25 @@ class RecordTableModel(QAbstractTableModel):
             return row.get("type", "")
         elif role == self.IdRole:
             return row.get("id", 0)
+        elif role == self.SelectedRole:
+            return row.get("id", 0) in self._selected_ids
 
         return None
 
     def setData(self, index: QModelIndex, value: Any, role: int = Qt.EditRole) -> bool:
         if not index.isValid() or not (0 <= index.row() < len(self._records)):
             return False
+
+        if role == self.SelectedRole:
+            row_id = self._records[index.row()]["id"]
+            if bool(value):
+                self._selected_ids.add(row_id)
+            else:
+                self._selected_ids.discard(row_id)
+            self.dataChanged.emit(index, index, [self.SelectedRole])
+            self.selectedCountChanged.emit(len(self._selected_ids))
+            self.allSelectedChanged.emit(self.allSelected)
+            return True
 
         if role == Qt.EditRole:
             col = index.column()
@@ -381,15 +418,57 @@ class RecordTableModel(QAbstractTableModel):
             db.delete(self.conn, r["id"])
         self._reload_records()
 
+    @Slot(int, bool)
+    def set_row_selected(self, row_idx: int, is_selected: bool) -> None:
+        """Set selection state for a specific visible row index."""
+        if not (0 <= row_idx < len(self._records)):
+            return
+        row_id = self._records[row_idx]["id"]
+        if is_selected:
+            self._selected_ids.add(row_id)
+        else:
+            self._selected_ids.discard(row_id)
+
+        idx = self.index(row_idx, 0)
+        self.dataChanged.emit(idx, idx, [self.SelectedRole])
+        self.selectedCountChanged.emit(len(self._selected_ids))
+        self.allSelectedChanged.emit(self.allSelected)
+
+    @Slot(bool)
+    def toggle_select_all(self, select: bool) -> None:
+        """Select or deselect all records."""
+        if select:
+            self._selected_ids = {r["id"] for r in self._all_records}
+        else:
+            self._selected_ids.clear()
+
+        if self._records:
+            start_idx = self.index(0, 0)
+            end_idx = self.index(len(self._records) - 1, len(self.COL_NAMES) - 1)
+            self.dataChanged.emit(start_idx, end_idx, [self.SelectedRole])
+        self.selectedCountChanged.emit(len(self._selected_ids))
+        self.allSelectedChanged.emit(self.allSelected)
+
     @Slot(str)
     def export_xlsx(self, file_path: str) -> None:
-        """Export current records to Excel safely with full Unicode Thai path support."""
+        """Export selected records (or all records if none selected) to Excel."""
         from irframe_parser.exporter import export_xlsx
 
         clean_path = QUrl(file_path).toLocalFile() if file_path.startswith("file:") else file_path
         if not clean_path.endswith(".xlsx"):
             clean_path += ".xlsx"
-        export_xlsx(self._all_records, clean_path)
+
+        # Export selected records if any, otherwise fallback to all
+        if self._selected_ids:
+            rows_to_export = [dict(r) for r in self._all_records if r["id"] in self._selected_ids]
+        else:
+            rows_to_export = [dict(r) for r in self._all_records]
+
+        # Renumber sequentially for the exported sheet (1..N)
+        for i, r in enumerate(rows_to_export, start=1):
+            r["no"] = i
+
+        export_xlsx(rows_to_export, clean_path)
 
     @Slot(result=list)
     def get_all_records(self) -> list[dict[str, Any]]:

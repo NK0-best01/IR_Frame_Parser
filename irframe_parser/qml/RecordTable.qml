@@ -31,6 +31,48 @@ Item {
                 anchors.rightMargin: 16
                 spacing: 8
 
+                // Column: Checkbox Select All (Width: 36)
+                Rectangle {
+                    Layout.preferredWidth: 36
+                    Layout.fillHeight: true
+                    color: "transparent"
+
+                    CheckBox {
+                        id: headerCheckBox
+                        anchors.centerIn: parent
+                        checked: backendModel.allSelected
+                        indicator: Rectangle {
+                            implicitWidth: 18
+                            implicitHeight: 18
+                            anchors.centerIn: parent
+                            radius: 4
+                            border.color: headerCheckBox.checked ? "#0284c7" : "#94a3b8"
+                            border.width: 1.5
+                            color: headerCheckBox.checked ? "#0284c7" : "#ffffff"
+
+                            Label {
+                                anchors.centerIn: parent
+                                text: "✓"
+                                font.bold: true
+                                font.pixelSize: 12
+                                color: "#ffffff"
+                                visible: headerCheckBox.checked
+                            }
+                        }
+                        onToggled: {
+                            backendModel.toggle_select_all(checked)
+                        }
+                    }
+
+                    Rectangle {
+                        anchors.right: parent.right
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: 1
+                        height: 18
+                        color: "#cbd5e1"
+                    }
+                }
+
                 // Column: # No (Width: 50)
                 Rectangle {
                     Layout.preferredWidth: 50
@@ -334,6 +376,42 @@ Item {
                         anchors.leftMargin: 8
                         anchors.rightMargin: 16
                         spacing: 8
+
+                        // Column: Row Checkbox (Width: 36)
+                        Rectangle {
+                            Layout.preferredWidth: 36
+                            Layout.fillHeight: true
+                            color: "transparent"
+
+                            CheckBox {
+                                id: rowCheckBox
+                                anchors.centerIn: parent
+                                Binding on checked {
+                                    value: model.selected !== undefined ? model.selected : false
+                                }
+                                indicator: Rectangle {
+                                    implicitWidth: 18
+                                    implicitHeight: 18
+                                    anchors.centerIn: parent
+                                    radius: 4
+                                    border.color: rowCheckBox.checked ? "#0284c7" : "#94a3b8"
+                                    border.width: 1.5
+                                    color: rowCheckBox.checked ? "#0284c7" : "#ffffff"
+
+                                    Label {
+                                        anchors.centerIn: parent
+                                        text: "✓"
+                                        font.bold: true
+                                        font.pixelSize: 12
+                                        color: "#ffffff"
+                                        visible: rowCheckBox.checked
+                                    }
+                                }
+                                onToggled: {
+                                    backendModel.set_row_selected(index, checked)
+                                }
+                            }
+                        }
 
                         // Number Badge
                         Rectangle {

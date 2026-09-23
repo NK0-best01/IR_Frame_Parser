@@ -139,4 +139,52 @@ def test_startup_expired_detection_and_confirmation(tmp_path):
     conn.close()
 
 
+def test_row_selection_and_select_all(model):
+    model.parse_raw("SN : SN-001\n\nSN : SN-002\n\nSN : SN-003")
+    assert model.rowCount() == 3
+    assert model.selectedCount == 3
+    assert model.allSelected is True
+
+    # Unselect row 1
+    model.set_row_selected(1, False)
+    assert model.selectedCount == 2
+    assert model.allSelected is False
+    assert model.data(model.index(1, 0), model.SelectedRole) is False
+    assert model.data(model.index(0, 0), model.SelectedRole) is True
+
+    # Toggle select all False
+    model.toggle_select_all(False)
+    assert model.selectedCount == 0
+    assert model.allSelected is False
+    assert model.data(model.index(0, 0), model.SelectedRole) is False
+
+    # Toggle select all True
+    model.toggle_select_all(True)
+    assert model.selectedCount == 3
+    assert model.allSelected is True
+    assert model.data(model.index(0, 0), model.SelectedRole) is True
+
+
+def test_export_only_selected_rows(model, tmp_path):
+    import openpyxl
+
+    model.parse_raw("SN : SN-KEEP\n\nSN : SN-DROP")
+    assert model.rowCount() == 2
+
+    # Deselect row 1 (SN-DROP)
+    model.set_row_selected(1, False)
+    assert model.selectedCount == 1
+
+    out_file = tmp_path / "selected_export.xlsx"
+    model.export_xlsx(str(out_file))
+
+    wb = openpyxl.load_workbook(out_file)
+    ws = wb.active
+    # Row 6 should be SN-KEEP
+    assert ws.cell(row=6, column=6).value == "SN-KEEP"
+    # Row 7 should not be SN-DROP (instead it might be note or empty)
+    assert ws.cell(row=7, column=6).value != "SN-DROP"
+
+
+
 
