@@ -1,9 +1,10 @@
-"""Application entry point for irframe_parser with LINE Seed Sans TH font."""
+"""Application entry point for irframe_parser with LINE Seed Sans TH font and Basic style."""
 import sys
 from pathlib import Path
 
 from PySide6.QtGui import QFont, QFontDatabase, QGuiApplication
 from PySide6.QtQml import QQmlApplicationEngine
+from PySide6.QtQuickControls2 import QQuickStyle
 
 from irframe_parser import db
 from irframe_parser.models import RecordTableModel
@@ -20,6 +21,9 @@ def setup_fonts() -> str:
 
 
 def main() -> int:
+    # Set QQuickStyle to Basic for full customization support without warnings
+    QQuickStyle.setStyle("Basic")
+
     app = QGuiApplication(sys.argv)
     app.setApplicationName("IR Frame Parser")
     app.setOrganizationName("RoboQ")

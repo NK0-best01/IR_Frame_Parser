@@ -14,17 +14,19 @@ ApplicationWindow {
     color: "#f8fafc"
 
     property int totalCount: 0
-    property int withSnCount: 0
-    property int missingSnCount: 0
-    property bool hasMissingSn: false
+    property int waitingCount: 0
+    property int completedCount: 0
+    property int currentRowLimit: 10 // Default 10 rows
 
     Connections {
         target: backendModel
+        function onSummaryStatsChanged(total, waiting, completed) {
+            window.totalCount = total
+            window.waitingCount = waiting
+            window.completedCount = completed
+        }
         function onStatsChanged(total, withSn, missingSn) {
             window.totalCount = total
-            window.withSnCount = withSn
-            window.missingSnCount = missingSn
-            window.hasMissingSn = missingSn > 0
         }
     }
 
@@ -33,7 +35,6 @@ ApplicationWindow {
         title: "เลือกโฟลเดอร์สำหรับบันทึกไฟล์ Excel (.xlsx)"
         fileMode: FileDialog.SaveFile
         nameFilters: ["Excel Files (*.xlsx)"]
-        currentFile: "file:///รายการเบิก_IR_Frame.xlsx"
         defaultSuffix: "xlsx"
         onAccepted: {
             var path = selectedFile.toString()
@@ -96,7 +97,6 @@ ApplicationWindow {
 
                 Item { Layout.fillWidth: true }
 
-                // Mode Indicator Badge
                 Rectangle {
                     Layout.preferredHeight: 30
                     Layout.preferredWidth: 150
@@ -116,7 +116,7 @@ ApplicationWindow {
             }
         }
 
-        // Main Split Workspace (Left: Input & Controls, Right: Table & Preview)
+        // Main Split Workspace
         RowLayout {
             Layout.fillWidth: true
             Layout.fillHeight: true
@@ -156,24 +156,28 @@ ApplicationWindow {
                     }
 
                     // Text Area Container
-                    ScrollView {
+                    Rectangle {
                         Layout.fillWidth: true
                         Layout.fillHeight: true
-                        clip: true
+                        color: "#f8fafc"
+                        border.color: rawTextArea.activeFocus ? "#0284c7" : "#cbd5e1"
+                        border.width: 1
+                        radius: 8
 
-                        TextArea {
-                            id: rawTextArea
-                            placeholderText: "วางข้อความแจ้งซ่อมจากแชท/ไลน์ที่นี่...\nระบบจะดึงข้อมูล:\n- สนง. / สาขา\n- วันที่รับเคส\n- สถานะแจ้งซ่อม\n- Serial Number (หลาย SN ได้)\n- ประเภทครุภัณฑ์"
-                            font.family: "Consolas"
-                            font.pixelSize: 13
-                            wrapMode: TextArea.Wrap
-                            selectByMouse: true
-                            color: "#0f172a"
-                            background: Rectangle {
-                                color: "#f8fafc"
-                                border.color: rawTextArea.activeFocus ? "#0284c7" : "#cbd5e1"
-                                border.width: 1
-                                radius: 8
+                        ScrollView {
+                            anchors.fill: parent
+                            anchors.margins: 6
+                            clip: true
+
+                            TextArea {
+                                id: rawTextArea
+                                placeholderText: "วางข้อความแจ้งซ่อมจากแชท/ไลน์ที่นี่...\nระบบจะดึงข้อมูล:\n- สนง. / สาขา\n- วันที่รับเคส\n- สถานะแจ้งซ่อม\n- Serial Number (หลาย SN ได้)\n- ประเภทครุภัณฑ์"
+                                font.family: "Consolas"
+                                font.pixelSize: 13
+                                wrapMode: TextArea.Wrap
+                                selectByMouse: true
+                                color: "#0f172a"
+                                background: null
                             }
                         }
                     }
@@ -183,26 +187,30 @@ ApplicationWindow {
                         Layout.fillWidth: true
                         spacing: 8
 
-                        Button {
+                        Rectangle {
                             Layout.fillWidth: true
                             Layout.preferredHeight: 42
-                            text: "⚡ คัดแยกข้อมูล (Parse Data)"
-                            contentItem: Text {
+                            radius: 8
+                            color: parseMouse.pressed ? "#0369a1" : (parseMouse.containsMouse ? "#0284c7" : "#0ea5e9")
+
+                            Label {
+                                anchors.centerIn: parent
                                 text: "⚡ คัดแยกข้อมูล (Parse Data)"
                                 font.family: appFontFamily
                                 font.bold: true
                                 font.pixelSize: 14
                                 color: "#ffffff"
-                                horizontalAlignment: Text.AlignHCenter
-                                verticalAlignment: Text.AlignVCenter
                             }
-                            background: Rectangle {
-                                color: parent.down ? "#0369a1" : (parent.hovered ? "#0284c7" : "#0ea5e9")
-                                radius: 8
-                            }
-                            onClicked: {
-                                if (rawTextArea.text.trim() === "") return;
-                                backendModel.parse_raw(rawTextArea.text)
+
+                            MouseArea {
+                                id: parseMouse
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: {
+                                    if (rawTextArea.text.trim() === "") return;
+                                    backendModel.parse_raw(rawTextArea.text)
+                                }
                             }
                         }
 
@@ -210,50 +218,58 @@ ApplicationWindow {
                             Layout.fillWidth: true
                             spacing: 8
 
-                            Button {
+                            Rectangle {
                                 Layout.fillWidth: true
                                 Layout.preferredHeight: 36
-                                text: "โหลดตัวอย่าง"
-                                contentItem: Text {
+                                radius: 6
+                                color: exampleMouse.pressed ? "#0f172a" : (exampleMouse.containsMouse ? "#334155" : "#1e293b")
+
+                                Label {
+                                    anchors.centerIn: parent
                                     text: "โหลดตัวอย่าง 15 เคส"
                                     font.family: appFontFamily
                                     font.bold: true
                                     font.pixelSize: 12
                                     color: "#ffffff"
-                                    horizontalAlignment: Text.AlignHCenter
-                                    verticalAlignment: Text.AlignVCenter
                                 }
-                                background: Rectangle {
-                                    color: parent.down ? "#0f172a" : (parent.hovered ? "#334155" : "#1e293b")
-                                    radius: 6
-                                }
-                                onClicked: {
-                                    backendModel.load_example()
+
+                                MouseArea {
+                                    id: exampleMouse
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: {
+                                        backendModel.load_example()
+                                    }
                                 }
                             }
 
-                            Button {
+                            Rectangle {
                                 Layout.fillWidth: true
                                 Layout.preferredHeight: 36
-                                text: "ล้างข้อความ"
-                                contentItem: Text {
+                                radius: 6
+                                color: clearMouse.pressed ? "#cbd5e1" : (clearMouse.containsMouse ? "#e2e8f0" : "#f1f5f9")
+                                border.color: "#cbd5e1"
+                                border.width: 1
+
+                                Label {
+                                    anchors.centerIn: parent
                                     text: "ล้างกล่องข้อความ"
                                     font.family: appFontFamily
                                     font.bold: true
                                     font.pixelSize: 12
                                     color: "#475569"
-                                    horizontalAlignment: Text.AlignHCenter
-                                    verticalAlignment: Text.AlignVCenter
                                 }
-                                background: Rectangle {
-                                    color: parent.down ? "#cbd5e1" : (parent.hovered ? "#e2e8f0" : "#f1f5f9")
-                                    radius: 6
-                                    border.color: "#cbd5e1"
-                                    border.width: 1
-                                }
-                                onClicked: {
-                                    rawTextArea.text = ""
-                                    rawTextArea.forceActiveFocus()
+
+                                MouseArea {
+                                    id: clearMouse
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: {
+                                        rawTextArea.text = ""
+                                        rawTextArea.forceActiveFocus()
+                                    }
                                 }
                             }
                         }
@@ -285,7 +301,7 @@ ApplicationWindow {
                                 Layout.fillWidth: true
                                 spacing: 8
 
-                                // Total Card
+                                // 1. Total Card ("ทั้งหมด")
                                 Rectangle {
                                     Layout.fillWidth: true
                                     height: 52
@@ -305,7 +321,7 @@ ApplicationWindow {
                                             Layout.alignment: Qt.AlignHCenter
                                         }
                                         Label {
-                                            text: "ทั้งหมด (แถว)"
+                                            text: "ทั้งหมด"
                                             font.family: appFontFamily
                                             font.pixelSize: 10
                                             color: "#64748b"
@@ -314,59 +330,59 @@ ApplicationWindow {
                                     }
                                 }
 
-                                // With SN Card
+                                // 2. Waiting Parts Card ("รออะไหล่")
                                 Rectangle {
                                     Layout.fillWidth: true
                                     height: 52
-                                    color: "#f0fdf4"
-                                    border.color: "#bbf7d0"
+                                    color: window.waitingCount > 0 ? "#fffbeb" : "#ffffff"
+                                    border.color: window.waitingCount > 0 ? "#fde68a" : "#cbd5e1"
                                     radius: 6
 
                                     ColumnLayout {
                                         anchors.centerIn: parent
                                         spacing: 2
                                         Label {
-                                            text: window.withSnCount.toString()
+                                            text: window.waitingCount.toString()
                                             font.family: appFontFamily
                                             font.bold: true
                                             font.pixelSize: 18
-                                            color: "#166534"
+                                            color: window.waitingCount > 0 ? "#b45309" : "#64748b"
                                             Layout.alignment: Qt.AlignHCenter
                                         }
                                         Label {
-                                            text: "มีเลข SN"
+                                            text: "รออะไหล่"
                                             font.family: appFontFamily
                                             font.pixelSize: 10
-                                            color: "#15803d"
+                                            color: window.waitingCount > 0 ? "#92400e" : "#64748b"
                                             Layout.alignment: Qt.AlignHCenter
                                         }
                                     }
                                 }
 
-                                // Missing SN Card
+                                // 3. Completed Card ("เสร็จแล้ว")
                                 Rectangle {
                                     Layout.fillWidth: true
                                     height: 52
-                                    color: window.missingSnCount > 0 ? "#fff7ed" : "#ffffff"
-                                    border.color: window.missingSnCount > 0 ? "#fed7aa" : "#cbd5e1"
+                                    color: window.completedCount > 0 ? "#f0fdf4" : "#ffffff"
+                                    border.color: window.completedCount > 0 ? "#bbf7d0" : "#cbd5e1"
                                     radius: 6
 
                                     ColumnLayout {
                                         anchors.centerIn: parent
                                         spacing: 2
                                         Label {
-                                            text: window.missingSnCount.toString()
+                                            text: window.completedCount.toString()
                                             font.family: appFontFamily
                                             font.bold: true
                                             font.pixelSize: 18
-                                            color: window.missingSnCount > 0 ? "#c2410c" : "#64748b"
+                                            color: window.completedCount > 0 ? "#15803d" : "#64748b"
                                             Layout.alignment: Qt.AlignHCenter
                                         }
                                         Label {
-                                            text: "ไม่มีเลข SN"
+                                            text: "เสร็จแล้ว"
                                             font.family: appFontFamily
                                             font.pixelSize: 10
-                                            color: window.missingSnCount > 0 ? "#ea580c" : "#64748b"
+                                            color: window.completedCount > 0 ? "#166534" : "#64748b"
                                             Layout.alignment: Qt.AlignHCenter
                                         }
                                     }
@@ -377,7 +393,7 @@ ApplicationWindow {
                 }
             }
 
-            // RIGHT WORKSPACE: Table / Document Preview (Flex width)
+            // RIGHT WORKSPACE: Data Grid Workspace
             Rectangle {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
@@ -391,66 +407,187 @@ ApplicationWindow {
                     anchors.margins: 16
                     spacing: 12
 
-                    // Workspace Toolbar
+                    // Workspace Toolbar with Search, Filter Row (10, 25, 50, All) & Export
                     RowLayout {
                         Layout.fillWidth: true
                         spacing: 10
 
-                        // Segmented View Switcher
+                        // 1. Text Search Input
                         Rectangle {
-                            Layout.preferredWidth: 320
+                            Layout.preferredWidth: 260
                             Layout.preferredHeight: 38
-                            color: "#f1f5f9"
+                            color: "#f8fafc"
+                            border.color: searchInput.activeFocus ? "#0284c7" : "#cbd5e1"
+                            border.width: 1
                             radius: 8
 
                             RowLayout {
                                 anchors.fill: parent
-                                anchors.margins: 3
-                                spacing: 2
+                                anchors.leftMargin: 10
+                                anchors.rightMargin: 8
+                                spacing: 6
 
-                                Rectangle {
+                                Label {
+                                    text: "🔍"
+                                    font.pixelSize: 13
+                                }
+
+                                TextField {
+                                    id: searchInput
                                     Layout.fillWidth: true
-                                    Layout.fillHeight: true
-                                    color: workspaceStack.currentIndex === 0 ? "#ffffff" : "transparent"
-                                    radius: 6
-                                    border.color: workspaceStack.currentIndex === 0 ? "#e2e8f0" : "transparent"
-
-                                    Label {
-                                        anchors.centerIn: parent
-                                        text: "📋 ตารางจัดการข้อมูล"
-                                        font.family: appFontFamily
-                                        font.bold: workspaceStack.currentIndex === 0
-                                        font.pixelSize: 12
-                                        color: workspaceStack.currentIndex === 0 ? "#0f172a" : "#64748b"
-                                    }
-
-                                    MouseArea {
-                                        anchors.fill: parent
-                                        cursorShape: Qt.PointingHandCursor
-                                        onClicked: workspaceStack.currentIndex = 0
+                                    placeholderText: "ค้นหา สนง., SN, รุ่น, วันที่..."
+                                    font.family: appFontFamily
+                                    font.pixelSize: 13
+                                    color: "#0f172a"
+                                    selectByMouse: true
+                                    background: null
+                                    onTextChanged: {
+                                        backendModel.set_search_text(text)
                                     }
                                 }
 
-                                Rectangle {
-                                    Layout.fillWidth: true
-                                    Layout.fillHeight: true
-                                    color: workspaceStack.currentIndex === 1 ? "#ffffff" : "transparent"
-                                    radius: 6
-                                    border.color: workspaceStack.currentIndex === 1 ? "#e2e8f0" : "transparent"
+                                ToolButton {
+                                    visible: searchInput.text.length > 0
+                                    text: "✕"
+                                    font.pixelSize: 11
+                                    Layout.preferredWidth: 20
+                                    Layout.preferredHeight: 20
+                                    onClicked: {
+                                        searchInput.text = ""
+                                    }
+                                }
+                            }
+                        }
 
-                                    Label {
-                                        anchors.centerIn: parent
-                                        text: "📄 พรีวิวใบเบิก (Print)"
-                                        font.family: appFontFamily
-                                        font.bold: workspaceStack.currentIndex === 1
-                                        font.pixelSize: 12
-                                        color: workspaceStack.currentIndex === 1 ? "#0f172a" : "#64748b"
+                        // 2. Row Limit Filter Segmented Buttons (10, 25, 50, All)
+                        RowLayout {
+                            spacing: 6
+
+                            Label {
+                                text: "แสดง:"
+                                font.family: appFontFamily
+                                font.bold: true
+                                font.pixelSize: 12
+                                color: "#64748b"
+                            }
+
+                            Rectangle {
+                                Layout.preferredWidth: 220
+                                Layout.preferredHeight: 38
+                                color: "#f1f5f9"
+                                radius: 8
+
+                                RowLayout {
+                                    anchors.fill: parent
+                                    anchors.margins: 3
+                                    spacing: 2
+
+                                    // Button 1: 10
+                                    Rectangle {
+                                        Layout.fillWidth: true
+                                        Layout.fillHeight: true
+                                        color: window.currentRowLimit === 10 ? "#ffffff" : "transparent"
+                                        radius: 6
+                                        border.color: window.currentRowLimit === 10 ? "#cbd5e1" : "transparent"
+
+                                        Label {
+                                            anchors.centerIn: parent
+                                            text: "10"
+                                            font.family: appFontFamily
+                                            font.bold: window.currentRowLimit === 10
+                                            font.pixelSize: 12
+                                            color: window.currentRowLimit === 10 ? "#0284c7" : "#64748b"
+                                        }
+
+                                        MouseArea {
+                                            anchors.fill: parent
+                                            cursorShape: Qt.PointingHandCursor
+                                            onClicked: {
+                                                window.currentRowLimit = 10
+                                                backendModel.set_row_limit(10)
+                                            }
+                                        }
                                     }
 
-                                    MouseArea {
-                                        anchors.fill: parent
-                                        cursorShape: Qt.PointingHandCursor
-                                        onClicked: workspaceStack.currentIndex = 1
+                                    // Button 2: 25
+                                    Rectangle {
+                                        Layout.fillWidth: true
+                                        Layout.fillHeight: true
+                                        color: window.currentRowLimit === 25 ? "#ffffff" : "transparent"
+                                        radius: 6
+                                        border.color: window.currentRowLimit === 25 ? "#cbd5e1" : "transparent"
+
+                                        Label {
+                                            anchors.centerIn: parent
+                                            text: "25"
+                                            font.family: appFontFamily
+                                            font.bold: window.currentRowLimit === 25
+                                            font.pixelSize: 12
+                                            color: window.currentRowLimit === 25 ? "#0284c7" : "#64748b"
+                                        }
+
+                                        MouseArea {
+                                            anchors.fill: parent
+                                            cursorShape: Qt.PointingHandCursor
+                                            onClicked: {
+                                                window.currentRowLimit = 25
+                                                backendModel.set_row_limit(25)
+                                            }
+                                        }
+                                    }
+
+                                    // Button 3: 50
+                                    Rectangle {
+                                        Layout.fillWidth: true
+                                        Layout.fillHeight: true
+                                        color: window.currentRowLimit === 50 ? "#ffffff" : "transparent"
+                                        radius: 6
+                                        border.color: window.currentRowLimit === 50 ? "#cbd5e1" : "transparent"
+
+                                        Label {
+                                            anchors.centerIn: parent
+                                            text: "50"
+                                            font.family: appFontFamily
+                                            font.bold: window.currentRowLimit === 50
+                                            font.pixelSize: 12
+                                            color: window.currentRowLimit === 50 ? "#0284c7" : "#64748b"
+                                        }
+
+                                        MouseArea {
+                                            anchors.fill: parent
+                                            cursorShape: Qt.PointingHandCursor
+                                            onClicked: {
+                                                window.currentRowLimit = 50
+                                                backendModel.set_row_limit(50)
+                                            }
+                                        }
+                                    }
+
+                                    // Button 4: All (Last one is All)
+                                    Rectangle {
+                                        Layout.fillWidth: true
+                                        Layout.fillHeight: true
+                                        color: window.currentRowLimit === 0 ? "#ffffff" : "transparent"
+                                        radius: 6
+                                        border.color: window.currentRowLimit === 0 ? "#cbd5e1" : "transparent"
+
+                                        Label {
+                                            anchors.centerIn: parent
+                                            text: "All"
+                                            font.family: appFontFamily
+                                            font.bold: window.currentRowLimit === 0
+                                            font.pixelSize: 12
+                                            color: window.currentRowLimit === 0 ? "#0284c7" : "#64748b"
+                                        }
+
+                                        MouseArea {
+                                            anchors.fill: parent
+                                            cursorShape: Qt.PointingHandCursor
+                                            onClicked: {
+                                                window.currentRowLimit = 0
+                                                backendModel.set_row_limit(0)
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -458,49 +595,30 @@ ApplicationWindow {
 
                         Item { Layout.fillWidth: true }
 
-                        // Add Row Button
-                        Button {
+                        // 3. Export Excel Button
+                        Rectangle {
+                            Layout.preferredWidth: 170
                             Layout.preferredHeight: 38
-                            text: "＋ เพิ่มรายการ"
-                            contentItem: Text {
-                                text: "＋ เพิ่มรายการ"
-                                font.family: appFontFamily
-                                font.bold: true
-                                font.pixelSize: 13
-                                color: "#334155"
-                                horizontalAlignment: Text.AlignHCenter
-                                verticalAlignment: Text.AlignVCenter
-                            }
-                            background: Rectangle {
-                                color: parent.down ? "#e2e8f0" : (parent.hovered ? "#f1f5f9" : "#ffffff")
-                                radius: 8
-                                border.color: "#cbd5e1"
-                                border.width: 1
-                            }
-                            onClicked: {
-                                backendModel.add_row()
-                            }
-                        }
+                            radius: 8
+                            color: exportMouse.pressed ? "#047857" : (exportMouse.containsMouse ? "#10b981" : "#059669")
 
-                        // Export Excel Button
-                        Button {
-                            Layout.preferredHeight: 38
-                            text: "⬇ Export Excel (.xlsx)"
-                            contentItem: Text {
+                            Label {
+                                anchors.centerIn: parent
                                 text: "⬇ Export Excel (.xlsx)"
                                 font.family: appFontFamily
                                 font.bold: true
                                 font.pixelSize: 13
                                 color: "#ffffff"
-                                horizontalAlignment: Text.AlignHCenter
-                                verticalAlignment: Text.AlignVCenter
                             }
-                            background: Rectangle {
-                                color: parent.down ? "#047857" : (parent.hovered ? "#10b981" : "#059669")
-                                radius: 8
-                            }
-                            onClicked: {
-                                exportDialog.open()
+
+                            MouseArea {
+                                id: exportMouse
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: {
+                                    exportDialog.open()
+                                }
                             }
                         }
                     }
@@ -511,22 +629,10 @@ ApplicationWindow {
                         color: "#f1f5f9"
                     }
 
-                    // Content Stack
-                    StackLayout {
-                        id: workspaceStack
+                    // Record Table View
+                    RecordTable {
                         Layout.fillWidth: true
                         Layout.fillHeight: true
-                        currentIndex: 0
-
-                        RecordTable {
-                            Layout.fillWidth: true
-                            Layout.fillHeight: true
-                        }
-
-                        Preview {
-                            Layout.fillWidth: true
-                            Layout.fillHeight: true
-                        }
                     }
                 }
             }
