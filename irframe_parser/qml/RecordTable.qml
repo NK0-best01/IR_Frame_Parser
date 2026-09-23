@@ -7,183 +7,326 @@ Item {
 
     ColumnLayout {
         anchors.fill: parent
-        spacing: 8
+        spacing: 10
 
         // Table Header
         Rectangle {
             Layout.fillWidth: true
-            height: 38
-            color: "#c9daf8"
-            border.color: "#777777"
+            height: 42
+            color: "#f1f5f9"
+            border.color: "#e2e8f0"
             border.width: 1
-            radius: 4
+            radius: 8
 
             RowLayout {
                 anchors.fill: parent
-                spacing: 0
+                anchors.leftMargin: 8
+                anchors.rightMargin: 8
+                spacing: 6
 
                 Label {
-                    Layout.preferredWidth: 60
-                    text: "ลำดับ"
+                    Layout.preferredWidth: 55
+                    text: "#"
+                    font.family: appFontFamily
                     font.bold: true
                     font.pixelSize: 13
+                    color: "#475569"
                     horizontalAlignment: Text.AlignHCenter
                 }
-                Rectangle { width: 1; Layout.fillHeight: true; color: "#777777" }
+
+                Rectangle { width: 1; height: 18; color: "#cbd5e1" }
+
                 Label {
-                    Layout.preferredWidth: 170
-                    text: "สนง."
+                    Layout.preferredWidth: 175
+                    text: "สำนักงาน / สาขา"
+                    font.family: appFontFamily
                     font.bold: true
                     font.pixelSize: 13
-                    horizontalAlignment: Text.AlignHCenter
+                    color: "#475569"
+                    leftPadding: 6
                 }
-                Rectangle { width: 1; Layout.fillHeight: true; color: "#777777" }
+
+                Rectangle { width: 1; height: 18; color: "#cbd5e1" }
+
                 Label {
-                    Layout.preferredWidth: 120
+                    Layout.preferredWidth: 110
                     text: "วันที่รับเคส"
+                    font.family: appFontFamily
                     font.bold: true
                     font.pixelSize: 13
+                    color: "#475569"
                     horizontalAlignment: Text.AlignHCenter
                 }
-                Rectangle { width: 1; Layout.fillHeight: true; color: "#777777" }
+
+                Rectangle { width: 1; height: 18; color: "#cbd5e1" }
+
                 Label {
                     Layout.preferredWidth: 110
                     text: "สถานะแจ้งซ่อม"
+                    font.family: appFontFamily
                     font.bold: true
                     font.pixelSize: 13
+                    color: "#475569"
                     horizontalAlignment: Text.AlignHCenter
                 }
-                Rectangle { width: 1; Layout.fillHeight: true; color: "#777777" }
+
+                Rectangle { width: 1; height: 18; color: "#cbd5e1" }
+
                 Label {
-                    Layout.preferredWidth: 130
+                    Layout.preferredWidth: 135
                     text: "Serial Number"
+                    font.family: appFontFamily
                     font.bold: true
                     font.pixelSize: 13
+                    color: "#475569"
                     horizontalAlignment: Text.AlignHCenter
                 }
-                Rectangle { width: 1; Layout.fillHeight: true; color: "#777777" }
+
+                Rectangle { width: 1; height: 18; color: "#cbd5e1" }
+
                 Label {
                     Layout.fillWidth: true
-                    text: "ประเภทครุภัณฑ์"
+                    text: "ประเภทครุภัณฑ์ / รุ่น"
+                    font.family: appFontFamily
                     font.bold: true
                     font.pixelSize: 13
-                    horizontalAlignment: Text.AlignHCenter
+                    color: "#475569"
+                    leftPadding: 6
                 }
-                Rectangle { width: 1; Layout.fillHeight: true; color: "#777777" }
+
+                Rectangle { width: 1; height: 18; color: "#cbd5e1" }
+
                 Label {
-                    Layout.preferredWidth: 70
+                    Layout.preferredWidth: 65
                     text: "จัดการ"
+                    font.family: appFontFamily
                     font.bold: true
                     font.pixelSize: 13
+                    color: "#475569"
                     horizontalAlignment: Text.AlignHCenter
                 }
             }
         }
 
-        // Table Body
+        // Table Rows or Empty State
         ScrollView {
             Layout.fillWidth: true
             Layout.fillHeight: true
             clip: true
 
-            ListView {
-                id: listView
-                anchors.fill: parent
-                model: backendModel
-                spacing: 2
+            Item {
+                width: parent.width
+                height: Math.max(listView.contentHeight, 350)
 
-                delegate: Rectangle {
-                    width: listView.width
-                    height: 40
-                    color: index % 2 === 0 ? "#ffffff" : "#f8fafc"
-                    border.color: "#cbd5e1"
-                    border.width: 1
-                    radius: 3
+                // Empty State
+                ColumnLayout {
+                    anchors.centerIn: parent
+                    spacing: 12
+                    visible: listView.count === 0
 
-                    RowLayout {
-                        anchors.fill: parent
-                        anchors.leftMargin: 4
-                        anchors.rightMargin: 4
-                        spacing: 6
+                    Rectangle {
+                        Layout.alignment: Qt.AlignHCenter
+                        width: 64
+                        height: 64
+                        radius: 32
+                        color: "#f1f5f9"
 
                         Label {
-                            Layout.preferredWidth: 50
-                            text: model.no !== undefined ? model.no : (index + 1)
-                            font.pixelSize: 13
-                            horizontalAlignment: Text.AlignHCenter
+                            anchors.centerIn: parent
+                            text: "📋"
+                            font.pixelSize: 28
+                        }
+                    }
+
+                    Label {
+                        Layout.alignment: Qt.AlignHCenter
+                        text: "ยังไม่มีรายการในตาราง"
+                        font.family: appFontFamily
+                        font.pixelSize: 16
+                        font.bold: true
+                        color: "#334155"
+                    }
+
+                    Label {
+                        Layout.alignment: Qt.AlignHCenter
+                        text: "วางข้อความแจ้งซ่อมที่แผงด้านซ้ายแล้วกด 'คัดแยกข้อมูล'\nหรือกดปุ่ม 'โหลดตัวอย่าง' เพื่อทดสอบ"
+                        font.family: appFontFamily
+                        font.pixelSize: 13
+                        color: "#64748b"
+                        horizontalAlignment: Text.AlignHCenter
+                        lineHeight: 1.3
+                    }
+                }
+
+                ListView {
+                    id: listView
+                    anchors.fill: parent
+                    model: backendModel
+                    spacing: 6
+                    visible: count > 0
+
+                    delegate: Rectangle {
+                        width: listView.width
+                        height: 48
+                        color: rowHoverHandler.hovered ? "#f8fafc" : "#ffffff"
+                        border.color: rowHoverHandler.hovered ? "#93c5fd" : "#e2e8f0"
+                        border.width: 1
+                        radius: 8
+
+                        HoverHandler {
+                            id: rowHoverHandler
                         }
 
-                        TextField {
-                            Layout.preferredWidth: 165
-                            text: model.office !== undefined ? model.office : ""
-                            font.pixelSize: 13
-                            selectByMouse: true
-                            onEditingFinished: {
-                                backendModel.update_cell(index, "office", text)
+                        RowLayout {
+                            anchors.fill: parent
+                            anchors.leftMargin: 8
+                            anchors.rightMargin: 8
+                            spacing: 6
+
+                            // Number Badge
+                            Rectangle {
+                                Layout.preferredWidth: 55
+                                Layout.preferredHeight: 28
+                                color: "#f1f5f9"
+                                radius: 6
+
+                                Label {
+                                    anchors.centerIn: parent
+                                    text: model.no !== undefined ? model.no : (index + 1)
+                                    font.family: appFontFamily
+                                    font.pixelSize: 12
+                                    font.bold: true
+                                    color: "#475569"
+                                }
                             }
-                        }
 
-                        TextField {
-                            Layout.preferredWidth: 115
-                            text: model.date !== undefined ? model.date : ""
-                            placeholderText: "dd/mm/yyyy"
-                            font.pixelSize: 13
-                            selectByMouse: true
-                            onEditingFinished: {
-                                backendModel.update_cell(index, "date", text)
+                            // Office Field
+                            TextField {
+                                Layout.preferredWidth: 175
+                                text: model.office !== undefined ? model.office : ""
+                                font.family: appFontFamily
+                                font.pixelSize: 13
+                                color: "#0f172a"
+                                selectByMouse: true
+                                placeholderText: "สนง. / สาขา"
+                                background: Rectangle {
+                                    color: parent.activeFocus ? "#f0f9ff" : "transparent"
+                                    border.color: parent.activeFocus ? "#0284c7" : "transparent"
+                                    border.width: 1
+                                    radius: 6
+                                }
+                                onEditingFinished: {
+                                    backendModel.update_cell(index, "office", text)
+                                }
                             }
-                        }
 
-                        TextField {
-                            Layout.preferredWidth: 105
-                            text: model.status !== undefined ? model.status : ""
-                            font.pixelSize: 13
-                            selectByMouse: true
-                            onEditingFinished: {
-                                backendModel.update_cell(index, "status", text)
-                            }
-                        }
-
-                        TextField {
-                            Layout.preferredWidth: 125
-                            text: model.sn !== undefined ? model.sn : ""
-                            font.family: "Consolas"
-                            font.pixelSize: 13
-                            selectByMouse: true
-                            color: text.trim() === "" ? "#dc2626" : "#111827"
-                            placeholderText: "(ไม่มี SN)"
-                            onEditingFinished: {
-                                backendModel.update_cell(index, "sn", text)
-                            }
-                        }
-
-                        TextField {
-                            Layout.fillWidth: true
-                            text: model.type !== undefined ? model.type : ""
-                            font.pixelSize: 13
-                            selectByMouse: true
-                            onEditingFinished: {
-                                backendModel.update_cell(index, "type", text)
-                            }
-                        }
-
-                        Button {
-                            Layout.preferredWidth: 60
-                            Layout.preferredHeight: 30
-                            text: "ลบ"
-                            contentItem: Text {
-                                text: "ลบ"
-                                color: "white"
+                            // Date Field
+                            TextField {
+                                Layout.preferredWidth: 110
+                                text: model.date !== undefined ? model.date : ""
+                                font.family: appFontFamily
                                 font.pixelSize: 12
                                 horizontalAlignment: Text.AlignHCenter
-                                verticalAlignment: Text.AlignVCenter
+                                color: "#334155"
+                                selectByMouse: true
+                                placeholderText: "วว/ดด/ปปปป"
+                                background: Rectangle {
+                                    color: parent.activeFocus ? "#f0f9ff" : "#f8fafc"
+                                    border.color: parent.activeFocus ? "#0284c7" : "#e2e8f0"
+                                    border.width: 1
+                                    radius: 6
+                                }
+                                onEditingFinished: {
+                                    backendModel.update_cell(index, "date", text)
+                                }
                             }
-                            background: Rectangle {
-                                color: parent.down ? "#b91c1c" : (parent.hovered ? "#ef4444" : "#dc2626")
-                                radius: 4
+
+                            // Status Field with Amber Badge
+                            TextField {
+                                Layout.preferredWidth: 110
+                                text: model.status !== undefined ? model.status : ""
+                                font.family: appFontFamily
+                                font.pixelSize: 12
+                                font.bold: true
+                                horizontalAlignment: Text.AlignHCenter
+                                color: "#92400e"
+                                selectByMouse: true
+                                background: Rectangle {
+                                    color: parent.activeFocus ? "#fef3c7" : "#fffbeb"
+                                    border.color: parent.activeFocus ? "#d97706" : "#fde68a"
+                                    border.width: 1
+                                    radius: 6
+                                }
+                                onEditingFinished: {
+                                    backendModel.update_cell(index, "status", text)
+                                }
                             }
-                            onClicked: {
-                                backendModel.delete_row(index)
+
+                            // Serial Number with Monospace Box
+                            TextField {
+                                Layout.preferredWidth: 135
+                                text: model.sn !== undefined ? model.sn : ""
+                                font.family: "Consolas"
+                                font.pixelSize: 13
+                                font.bold: true
+                                horizontalAlignment: Text.AlignHCenter
+                                color: text.trim() === "" ? "#dc2626" : "#0369a1"
+                                selectByMouse: true
+                                placeholderText: "— ไม่มี SN —"
+                                background: Rectangle {
+                                    color: text.trim() === "" ? "#fef2f2" : "#f0f9ff"
+                                    border.color: parent.activeFocus ? "#0284c7" : (text.trim() === "" ? "#fca5a5" : "#bae6fd")
+                                    border.width: 1
+                                    radius: 6
+                                }
+                                onEditingFinished: {
+                                    backendModel.update_cell(index, "sn", text)
+                                }
+                            }
+
+                            // Equipment Type
+                            TextField {
+                                Layout.fillWidth: true
+                                text: model.type !== undefined ? model.type : ""
+                                font.family: appFontFamily
+                                font.pixelSize: 13
+                                color: "#334155"
+                                selectByMouse: true
+                                placeholderText: "ประเภทครุภัณฑ์"
+                                background: Rectangle {
+                                    color: parent.activeFocus ? "#f0f9ff" : "transparent"
+                                    border.color: parent.activeFocus ? "#0284c7" : "transparent"
+                                    border.width: 1
+                                    radius: 6
+                                }
+                                onEditingFinished: {
+                                    backendModel.update_cell(index, "type", text)
+                                }
+                            }
+
+                            // Delete Action Button
+                            Button {
+                                Layout.preferredWidth: 55
+                                Layout.preferredHeight: 32
+                                text: "ลบ"
+                                contentItem: Text {
+                                    text: "ลบ"
+                                    font.family: appFontFamily
+                                    font.bold: true
+                                    font.pixelSize: 12
+                                    color: parent.hovered ? "#ffffff" : "#ef4444"
+                                    horizontalAlignment: Text.AlignHCenter
+                                    verticalAlignment: Text.AlignVCenter
+                                }
+                                background: Rectangle {
+                                    color: parent.down ? "#b91c1c" : (parent.hovered ? "#ef4444" : "#fee2e2")
+                                    radius: 6
+                                    border.color: parent.hovered ? "transparent" : "#fca5a5"
+                                    border.width: 1
+                                }
+                                onClicked: {
+                                    backendModel.delete_row(index)
+                                }
                             }
                         }
                     }
