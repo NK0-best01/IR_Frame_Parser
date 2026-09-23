@@ -109,8 +109,8 @@ def test_expired_completed_cleanup_slots(model):
     assert model.data(model.index(0, model.COL_SN), Qt.DisplayRole) == "WAIT-111"
 
 
-def test_auto_cleanup_on_startup(tmp_path):
-    db_path = tmp_path / "test_auto.db"
+def test_startup_expired_detection_and_confirmation(tmp_path):
+    db_path = tmp_path / "test_startup.db"
     conn = db.connect(str(db_path))
     db.init_schema(conn)
     db.insert_many(conn, [
@@ -119,10 +119,19 @@ def test_auto_cleanup_on_startup(tmp_path):
         {"office": "สำนักงาน C", "status": "รออะไหล่", "sn": "WAIT-3"},
     ])
 
-    # Instantiate model -> should automatically clean up EXPIRED-1
+    # Startup: Model loads all records safely without silent deletion
     new_model = RecordTableModel(conn)
-    assert new_model.get_auto_deleted_count() == 1
+    assert new_model.rowCount() == 3
+
+    # On startup check: UI detects 1 expired record
+    expired_count = new_model.check_expired_completed_count(30)
+    assert expired_count == 1
+
+    # User confirms deletion
+    deleted = new_model.confirm_delete_expired(30)
+    assert deleted == 1
     assert new_model.rowCount() == 2
+
     sns = [new_model.data(new_model.index(i, new_model.COL_SN), Qt.DisplayRole) for i in range(new_model.rowCount())]
     assert "EXPIRED-1" not in sns
     assert "RECENT-2" in sns
