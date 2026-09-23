@@ -9,9 +9,9 @@ from PySide6.QtCore import (
     QModelIndex,
     QObject,
     Qt,
+    QUrl,
     Signal,
     Slot,
-    Property,
 )
 
 from irframe_parser import db
@@ -37,7 +37,7 @@ INITIAL_RECORDS = [
 
 
 class RecordTableModel(QAbstractTableModel):
-    """Table model managing repair records backed by SQLite."""
+    """Table model managing repair records backed by SQLite with surgical row updates."""
 
     COL_NO = 0
     COL_OFFICE = 1
@@ -74,7 +74,7 @@ class RecordTableModel(QAbstractTableModel):
 
     def _emit_stats(self) -> None:
         total = len(self._records)
-        with_sn = sum(1 for r in self._records if r.get("sn"))
+        with_sn = sum(1 for r in self._records if str(r.get("sn", "")).strip())
         missing_sn = total - with_sn
         self.statsChanged.emit(total, with_sn, missing_sn)
         self.hasMissingSnChanged.emit(missing_sn > 0)
@@ -140,6 +140,9 @@ class RecordTableModel(QAbstractTableModel):
                 col_name = self.COL_NAMES[col]
                 row_id = self._records[index.row()]["id"]
                 val_str = str(value)
+                if self._records[index.row()].get(col_name) == val_str:
+                    return True
+
                 db.update_field(self.conn, row_id, col_name, val_str)
                 self._records[index.row()][col_name] = val_str
                 self.dataChanged.emit(index, index, [Qt.DisplayRole, Qt.EditRole])
@@ -155,15 +158,17 @@ class RecordTableModel(QAbstractTableModel):
 
     @Slot(str)
     def parse_raw(self, text: str) -> None:
-        """Parse raw text and insert into database."""
+        """Parse raw text and insert into database without full UI stall."""
         rows = parse_raw_fn(text)
-        if rows:
-            db.insert_many(self.conn, rows)
-            self._reload_records()
+        if not rows:
+            return
+
+        db.insert_many(self.conn, rows)
+        self._reload_records()
 
     @Slot()
     def add_row(self) -> None:
-        """Add a new empty record."""
+        """Add a single row smoothly without freezing UI."""
         new_record = {
             "office": "",
             "date": "",
@@ -172,32 +177,60 @@ class RecordTableModel(QAbstractTableModel):
             "type": "Dell Optiplax 3050 AIO",
         }
         db.insert_many(self.conn, [new_record])
-        self._reload_records()
+        new_rows = db.list_all(self.conn)
+        pos = len(self._records)
+        self.beginInsertRows(QModelIndex(), pos, pos)
+        self._records = new_rows
+        self.endInsertRows()
+        self._emit_stats()
 
     @Slot(int)
     def delete_row(self, row_idx: int) -> None:
-        """Delete row at given index and renumber."""
-        if 0 <= row_idx < len(self._records):
-            row_id = self._records[row_idx]["id"]
-            db.delete(self.conn, row_id)
-            db.renumber(self.conn)
-            self._reload_records()
+        """Delete row smoothly using beginRemoveRows, keeping UI responsive."""
+        if not (0 <= row_idx < len(self._records)):
+            return
+
+        row_id = self._records[row_idx]["id"]
+        db.delete(self.conn, row_id)
+        db.renumber(self.conn)
+        new_rows = db.list_all(self.conn)
+
+        self.beginRemoveRows(QModelIndex(), row_idx, row_idx)
+        self._records = new_rows
+        self.endRemoveRows()
+
+        if self._records:
+            self.dataChanged.emit(
+                self.index(0, 0),
+                self.index(len(self._records) - 1, 0),
+                [Qt.DisplayRole, self.NoRole],
+            )
+        self._emit_stats()
 
     @Slot(int, str, str)
     def update_cell(self, row_idx: int, col_name: str, value: str) -> None:
-        """Update a specific field for a row index directly from QML."""
-        if 0 <= row_idx < len(self._records) and col_name in self.COL_NAMES:
-            row_id = self._records[row_idx]["id"]
-            db.update_field(self.conn, row_id, col_name, value)
-            self._records[row_idx][col_name] = value
-            col_idx = self.COL_NAMES.index(col_name)
-            idx = self.index(row_idx, col_idx)
-            self.dataChanged.emit(idx, idx, [Qt.DisplayRole, Qt.EditRole])
-            self._emit_stats()
+        """Update a specific cell if changed, avoiding redundant DB writes and freezes."""
+        if not (0 <= row_idx < len(self._records)):
+            return
+        if col_name not in self.COL_NAMES:
+            return
+
+        current_val = str(self._records[row_idx].get(col_name, ""))
+        if current_val == value:
+            return
+
+        row_id = self._records[row_idx]["id"]
+        db.update_field(self.conn, row_id, col_name, value)
+        self._records[row_idx][col_name] = value
+
+        col_idx = self.COL_NAMES.index(col_name)
+        idx = self.index(row_idx, col_idx)
+        self.dataChanged.emit(idx, idx, [Qt.DisplayRole, Qt.EditRole])
+        self._emit_stats()
 
     @Slot()
     def load_example(self) -> None:
-        """Load 15 sample records from the original template."""
+        """Load 15 sample records."""
         for r in self._records:
             db.delete(self.conn, r["id"])
         db.insert_many(self.conn, INITIAL_RECORDS)
@@ -213,12 +246,15 @@ class RecordTableModel(QAbstractTableModel):
 
     @Slot(str)
     def export_xlsx(self, file_path: str) -> None:
-        """Export current records to Excel .xlsx."""
+        """Export current records to Excel safely with full Unicode Thai path support."""
         from irframe_parser.exporter import export_xlsx
-        clean_path = file_path.replace("file:///", "").replace("file://", "")
+
+        clean_path = QUrl(file_path).toLocalFile() if file_path.startswith("file:") else file_path
+        if not clean_path.endswith(".xlsx"):
+            clean_path += ".xlsx"
         export_xlsx(self._records, clean_path)
 
     @Slot(result=list)
     def get_all_records(self) -> list[dict[str, Any]]:
-        """Return all records for preview in QML."""
+        """Return all records."""
         return list(self._records)

@@ -166,6 +166,7 @@ Item {
                     visible: count > 0
 
                     delegate: Rectangle {
+                        id: rowDelegate
                         width: listView.width
                         height: 48
                         color: rowHoverHandler.hovered ? "#f8fafc" : "#ffffff"
@@ -202,6 +203,7 @@ Item {
 
                             // Office Field
                             TextField {
+                                id: officeField
                                 Layout.preferredWidth: 175
                                 text: model.office !== undefined ? model.office : ""
                                 font.family: appFontFamily
@@ -210,18 +212,21 @@ Item {
                                 selectByMouse: true
                                 placeholderText: "สนง. / สาขา"
                                 background: Rectangle {
-                                    color: parent.activeFocus ? "#f0f9ff" : "transparent"
-                                    border.color: parent.activeFocus ? "#0284c7" : "transparent"
+                                    color: officeField.activeFocus ? "#f0f9ff" : "transparent"
+                                    border.color: officeField.activeFocus ? "#0284c7" : "transparent"
                                     border.width: 1
                                     radius: 6
                                 }
                                 onEditingFinished: {
-                                    backendModel.update_cell(index, "office", text)
+                                    if (text !== (model.office || "")) {
+                                        backendModel.update_cell(index, "office", text)
+                                    }
                                 }
                             }
 
                             // Date Field
                             TextField {
+                                id: dateField
                                 Layout.preferredWidth: 110
                                 text: model.date !== undefined ? model.date : ""
                                 font.family: appFontFamily
@@ -231,18 +236,21 @@ Item {
                                 selectByMouse: true
                                 placeholderText: "วว/ดด/ปปปป"
                                 background: Rectangle {
-                                    color: parent.activeFocus ? "#f0f9ff" : "#f8fafc"
-                                    border.color: parent.activeFocus ? "#0284c7" : "#e2e8f0"
+                                    color: dateField.activeFocus ? "#f0f9ff" : "#f8fafc"
+                                    border.color: dateField.activeFocus ? "#0284c7" : "#e2e8f0"
                                     border.width: 1
                                     radius: 6
                                 }
                                 onEditingFinished: {
-                                    backendModel.update_cell(index, "date", text)
+                                    if (text !== (model.date || "")) {
+                                        backendModel.update_cell(index, "date", text)
+                                    }
                                 }
                             }
 
                             // Status Field with Amber Badge
                             TextField {
+                                id: statusField
                                 Layout.preferredWidth: 110
                                 text: model.status !== undefined ? model.status : ""
                                 font.family: appFontFamily
@@ -252,40 +260,46 @@ Item {
                                 color: "#92400e"
                                 selectByMouse: true
                                 background: Rectangle {
-                                    color: parent.activeFocus ? "#fef3c7" : "#fffbeb"
-                                    border.color: parent.activeFocus ? "#d97706" : "#fde68a"
+                                    color: statusField.activeFocus ? "#fef3c7" : "#fffbeb"
+                                    border.color: statusField.activeFocus ? "#d97706" : "#fde68a"
                                     border.width: 1
                                     radius: 6
                                 }
                                 onEditingFinished: {
-                                    backendModel.update_cell(index, "status", text)
+                                    if (text !== (model.status || "")) {
+                                        backendModel.update_cell(index, "status", text)
+                                    }
                                 }
                             }
 
                             // Serial Number with Monospace Box
                             TextField {
+                                id: snField
                                 Layout.preferredWidth: 135
                                 text: model.sn !== undefined ? model.sn : ""
                                 font.family: "Consolas"
                                 font.pixelSize: 13
                                 font.bold: true
                                 horizontalAlignment: Text.AlignHCenter
-                                color: text.trim() === "" ? "#dc2626" : "#0369a1"
+                                color: snField.text.trim() === "" ? "#dc2626" : "#0369a1"
                                 selectByMouse: true
                                 placeholderText: "— ไม่มี SN —"
                                 background: Rectangle {
-                                    color: text.trim() === "" ? "#fef2f2" : "#f0f9ff"
-                                    border.color: parent.activeFocus ? "#0284c7" : (text.trim() === "" ? "#fca5a5" : "#bae6fd")
+                                    color: snField.text.trim() === "" ? "#fef2f2" : "#f0f9ff"
+                                    border.color: snField.activeFocus ? "#0284c7" : (snField.text.trim() === "" ? "#fca5a5" : "#bae6fd")
                                     border.width: 1
                                     radius: 6
                                 }
                                 onEditingFinished: {
-                                    backendModel.update_cell(index, "sn", text)
+                                    if (text !== (model.sn || "")) {
+                                        backendModel.update_cell(index, "sn", text)
+                                    }
                                 }
                             }
 
                             // Equipment Type
                             TextField {
+                                id: typeField
                                 Layout.fillWidth: true
                                 text: model.type !== undefined ? model.type : ""
                                 font.family: appFontFamily
@@ -294,18 +308,21 @@ Item {
                                 selectByMouse: true
                                 placeholderText: "ประเภทครุภัณฑ์"
                                 background: Rectangle {
-                                    color: parent.activeFocus ? "#f0f9ff" : "transparent"
-                                    border.color: parent.activeFocus ? "#0284c7" : "transparent"
+                                    color: typeField.activeFocus ? "#f0f9ff" : "transparent"
+                                    border.color: typeField.activeFocus ? "#0284c7" : "transparent"
                                     border.width: 1
                                     radius: 6
                                 }
                                 onEditingFinished: {
-                                    backendModel.update_cell(index, "type", text)
+                                    if (text !== (model.type || "")) {
+                                        backendModel.update_cell(index, "type", text)
+                                    }
                                 }
                             }
 
                             // Delete Action Button
                             Button {
+                                id: deleteButton
                                 Layout.preferredWidth: 55
                                 Layout.preferredHeight: 32
                                 text: "ลบ"
@@ -314,14 +331,14 @@ Item {
                                     font.family: appFontFamily
                                     font.bold: true
                                     font.pixelSize: 12
-                                    color: parent.hovered ? "#ffffff" : "#ef4444"
+                                    color: deleteButton.hovered ? "#ffffff" : "#ef4444"
                                     horizontalAlignment: Text.AlignHCenter
                                     verticalAlignment: Text.AlignVCenter
                                 }
                                 background: Rectangle {
-                                    color: parent.down ? "#b91c1c" : (parent.hovered ? "#ef4444" : "#fee2e2")
+                                    color: deleteButton.down ? "#b91c1c" : (deleteButton.hovered ? "#ef4444" : "#fee2e2")
                                     radius: 6
-                                    border.color: parent.hovered ? "transparent" : "#fca5a5"
+                                    border.color: deleteButton.hovered ? "transparent" : "#fca5a5"
                                     border.width: 1
                                 }
                                 onClicked: {
