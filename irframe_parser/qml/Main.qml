@@ -356,6 +356,7 @@ ApplicationWindow {
                                 onClicked: {
                                     if (rawTextArea.text.trim() === "") return;
                                     backendModel.parse_raw(rawTextArea.text)
+                                    rawTextArea.text = ""
                                 }
                             }
                         }
