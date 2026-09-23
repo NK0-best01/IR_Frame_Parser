@@ -86,3 +86,26 @@ def test_date_sorting_newest_to_oldest(model):
     assert model.data(model.index(0, model.COL_DATE), Qt.DisplayRole) == "10/05/2567"
     assert model.data(model.index(2, model.COL_DATE), Qt.DisplayRole) == "05/01/2568"
 
+
+def test_expired_completed_cleanup_slots(model):
+    db.insert_many(model.conn, [
+        {"office": "สำนักงาน A", "status": "เสร็จแล้ว", "sn": "OLD-999", "completed_at": "2026-01-01 12:00:00"},
+        {"office": "สำนักงาน B", "status": "รออะไหล่", "sn": "WAIT-111"},
+    ])
+    model._reload_records()
+
+    # Check expired count
+    count = model.check_expired_completed_count(30)
+    assert count == 1
+
+    records = model.get_expired_completed_records(30)
+    assert len(records) == 1
+    assert records[0]["sn"] == "OLD-999"
+
+    # Confirm deletion
+    deleted = model.confirm_delete_expired(30)
+    assert deleted == 1
+    assert model.rowCount() == 1
+    assert model.data(model.index(0, model.COL_SN), Qt.DisplayRole) == "WAIT-111"
+
+

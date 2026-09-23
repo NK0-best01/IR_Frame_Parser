@@ -30,6 +30,155 @@ ApplicationWindow {
         }
     }
 
+    Component.onCompleted: {
+        startupCheckTimer.start()
+    }
+
+    Timer {
+        id: startupCheckTimer
+        interval: 450
+        repeat: false
+        onTriggered: {
+            var count = backendModel.check_expired_completed_count(30)
+            if (count > 0) {
+                expiredCleanupDialog.expiredCount = count
+                expiredCleanupDialog.open()
+            }
+        }
+    }
+
+    Dialog {
+        id: expiredCleanupDialog
+        property int expiredCount: 0
+        modal: true
+        anchors.centerIn: Overlay.overlay
+        width: 480
+        padding: 24
+        dim: true
+        closePolicy: Popup.CloseOnEscape
+        background: Rectangle {
+            color: "#ffffff"
+            radius: 14
+            border.color: "#cbd5e1"
+            border.width: 1
+        }
+
+        contentItem: ColumnLayout {
+            spacing: 16
+
+            RowLayout {
+                spacing: 12
+                Rectangle {
+                    width: 44
+                    height: 44
+                    radius: 22
+                    color: expiredCleanupDialog.expiredCount > 0 ? "#fef2f2" : "#f0fdf4"
+                    border.color: expiredCleanupDialog.expiredCount > 0 ? "#fecaca" : "#bbf7d0"
+                    Label {
+                        anchors.centerIn: parent
+                        text: expiredCleanupDialog.expiredCount > 0 ? "🗑️" : "✅"
+                        font.pixelSize: 22
+                    }
+                }
+                ColumnLayout {
+                    spacing: 2
+                    Label {
+                        text: expiredCleanupDialog.expiredCount > 0 ? "แจ้งเตือนการล้างรายการซ่อมเสร็จ" : "ตรวจสอบรายการซ่อมเสร็จ 30 วัน"
+                        font.family: appFontFamily
+                        font.bold: true
+                        font.pixelSize: 16
+                        color: "#0f172a"
+                    }
+                    Label {
+                        text: "เงื่อนไข: สถานะ 'เสร็จแล้ว' ครบกำหนด 30 วัน"
+                        font.family: appFontFamily
+                        font.pixelSize: 12
+                        color: "#64748b"
+                    }
+                }
+            }
+
+            Rectangle {
+                Layout.fillWidth: true
+                Layout.preferredHeight: 1
+                color: "#f1f5f9"
+            }
+
+            Label {
+                Layout.fillWidth: true
+                wrapMode: Label.WordWrap
+                text: expiredCleanupDialog.expiredCount > 0
+                    ? "พบรายการที่มีสถานะ <b>เสร็จแล้ว</b> และครบกำหนด 30 วัน จำนวน <b><font color='#dc2626'>" + expiredCleanupDialog.expiredCount + "</font></b> รายการ\n\nต้องการลบรายการเหล่านี้ออกจากระบบเพื่อลดความซ้ำซ้อนของข้อมูลหรือไม่?"
+                    : "ยอดเยี่ยม! ขณะนี้ <b>ยังไม่มี</b> รายการสถานะ 'เสร็จแล้ว' ที่ครบกำหนด 30 วันในระบบ"
+                font.family: appFontFamily
+                font.pixelSize: 13
+                color: "#334155"
+                lineHeight: 1.3
+            }
+
+            RowLayout {
+                Layout.fillWidth: true
+                Layout.topMargin: 8
+                spacing: 10
+
+                Item { Layout.fillWidth: true }
+
+                Rectangle {
+                    Layout.preferredWidth: expiredCleanupDialog.expiredCount > 0 ? 120 : 100
+                    Layout.preferredHeight: 38
+                    radius: 8
+                    color: cancelMouse.pressed ? "#cbd5e1" : (cancelMouse.containsMouse ? "#e2e8f0" : "#f1f5f9")
+                    border.color: "#cbd5e1"
+
+                    Label {
+                        anchors.centerIn: parent
+                        text: expiredCleanupDialog.expiredCount > 0 ? "เก็บไว้ก่อน" : "ตกลง"
+                        font.family: appFontFamily
+                        font.bold: true
+                        font.pixelSize: 13
+                        color: "#475569"
+                    }
+
+                    MouseArea {
+                        id: cancelMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: expiredCleanupDialog.close()
+                    }
+                }
+
+                Rectangle {
+                    visible: expiredCleanupDialog.expiredCount > 0
+                    Layout.preferredWidth: 160
+                    Layout.preferredHeight: 38
+                    radius: 8
+                    color: deleteConfirmMouse.pressed ? "#991b1b" : (deleteConfirmMouse.containsMouse ? "#dc2626" : "#ef4444")
+
+                    Label {
+                        anchors.centerIn: parent
+                        text: "ยืนยันลบรายการ (" + expiredCleanupDialog.expiredCount + ")"
+                        font.family: appFontFamily
+                        font.bold: true
+                        font.pixelSize: 13
+                        color: "#ffffff"
+                    }
+
+                    MouseArea {
+                        id: deleteConfirmMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            backendModel.confirm_delete_expired(30)
+                            expiredCleanupDialog.close()
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     FileDialog {
         id: exportDialog
         title: "เลือกโฟลเดอร์สำหรับบันทึกไฟล์ Excel (.xlsx)"
@@ -595,7 +744,45 @@ ApplicationWindow {
 
                         Item { Layout.fillWidth: true }
 
-                        // 3. Export Excel Button
+                        // 3. Clean Expired Button
+                        Rectangle {
+                            Layout.preferredWidth: 150
+                            Layout.preferredHeight: 38
+                            radius: 8
+                            color: cleanMouse.pressed ? "#e2e8f0" : (cleanMouse.containsMouse ? "#f1f5f9" : "#ffffff")
+                            border.color: "#cbd5e1"
+                            border.width: 1
+
+                            RowLayout {
+                                anchors.centerIn: parent
+                                spacing: 6
+                                Label {
+                                    text: "🧹"
+                                    font.pixelSize: 13
+                                }
+                                Label {
+                                    text: "ล้างเคสครบ 30 วัน"
+                                    font.family: appFontFamily
+                                    font.bold: true
+                                    font.pixelSize: 12
+                                    color: "#475569"
+                                }
+                            }
+
+                            MouseArea {
+                                id: cleanMouse
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: {
+                                    var count = backendModel.check_expired_completed_count(30)
+                                    expiredCleanupDialog.expiredCount = count
+                                    expiredCleanupDialog.open()
+                                }
+                            }
+                        }
+
+                        // 4. Export Excel Button
                         Rectangle {
                             Layout.preferredWidth: 170
                             Layout.preferredHeight: 38

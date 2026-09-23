@@ -1,6 +1,7 @@
 """Qt Model definitions for irframe_parser with date chronological sorting, status dropdown, and summary stats."""
 from __future__ import annotations
 
+import datetime
 import re
 import sqlite3
 from typing import Any
@@ -345,9 +346,14 @@ class RecordTableModel(QAbstractTableModel):
         row_id = self._records[row_idx]["id"]
         db.update_field(self.conn, row_id, col_name, value)
         self._records[row_idx][col_name] = value
+        if col_name == "status":
+            ts = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") if "เสร็จ" in value else None
+            self._records[row_idx]["completed_at"] = ts
         for r in self._all_records:
             if r["id"] == row_id:
                 r[col_name] = value
+                if col_name == "status":
+                    r["completed_at"] = self._records[row_idx].get("completed_at")
                 break
 
         start_idx = self.index(row_idx, 0)
@@ -389,3 +395,21 @@ class RecordTableModel(QAbstractTableModel):
     def get_all_records(self) -> list[dict[str, Any]]:
         """Return all records."""
         return list(self._records)
+
+    @Slot(int, result=int)
+    def check_expired_completed_count(self, days: int = 30) -> int:
+        """Return number of completed records older than `days` days."""
+        return len(db.get_expired_completed_records(self.conn, days))
+
+    @Slot(int, result=list)
+    def get_expired_completed_records(self, days: int = 30) -> list[dict[str, Any]]:
+        """Return expired completed records for displaying in confirmation dialog."""
+        return db.get_expired_completed_records(self.conn, days)
+
+    @Slot(int, result=int)
+    def confirm_delete_expired(self, days: int = 30) -> int:
+        """Delete expired completed records and refresh table."""
+        deleted = db.delete_expired_completed(self.conn, days)
+        if deleted > 0:
+            self._reload_records()
+        return deleted
