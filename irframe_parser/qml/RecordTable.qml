@@ -171,9 +171,9 @@ Item {
                     }
                 }
 
-                // Column: Status (Width: 125)
+                // Column: Status (Width: 150)
                 Rectangle {
-                    Layout.preferredWidth: 125
+                    Layout.preferredWidth: 150
                     Layout.fillHeight: true
                     color: headerStatusMouse.hovered ? "#e2e8f0" : "transparent"
                     radius: 4
@@ -479,14 +479,14 @@ Item {
                             }
                         }
 
-                        // Status Dropdown (รออะไหล่ / เสร็จแล้ว)
+                        // Status Dropdown (เคสทัสสกรีนเสีย / เคสทำเครื่องทดแทน)
                         ComboBox {
                             id: statusCombo
-                            Layout.preferredWidth: 125
+                            Layout.preferredWidth: 150
                             Layout.preferredHeight: 32
-                            model: ["รออะไหล่", "เสร็จแล้ว"]
+                            model: ["เคสทัสสกรีนเสีย", "เคสทำเครื่องทดแทน"]
                             Binding on currentIndex {
-                                value: (model.status && model.status.indexOf("เสร็จ") !== -1) ? 1 : 0
+                                value: (model.status && model.status.indexOf("ทดแทน") !== -1) ? 1 : 0
                             }
 
                             contentItem: Label {
@@ -496,14 +496,14 @@ Item {
                                 font.family: appFontFamily
                                 font.pixelSize: 12
                                 font.bold: true
-                                color: statusCombo.currentIndex === 1 ? "#166534" : "#92400e"
+                                color: statusCombo.currentIndex === 1 ? "#4338ca" : "#c2410c"
                                 verticalAlignment: Text.AlignVCenter
                                 elide: Text.ElideRight
                             }
 
                             background: Rectangle {
-                                color: statusCombo.currentIndex === 1 ? "#dcfce7" : "#fef3c7"
-                                border.color: statusCombo.currentIndex === 1 ? "#86efac" : "#fde68a"
+                                color: statusCombo.currentIndex === 1 ? "#eef2ff" : "#fff7ed"
+                                border.color: statusCombo.currentIndex === 1 ? "#c7d2fe" : "#fed7aa"
                                 border.width: 1
                                 radius: 6
                             }
@@ -514,7 +514,7 @@ Item {
                                 anchors.verticalCenter: statusCombo.verticalCenter
                                 text: "▾"
                                 font.pixelSize: 12
-                                color: statusCombo.currentIndex === 1 ? "#166534" : "#92400e"
+                                color: statusCombo.currentIndex === 1 ? "#4338ca" : "#c2410c"
                             }
 
                             popup: Popup {
@@ -543,7 +543,7 @@ Item {
                                     font.family: appFontFamily
                                     font.pixelSize: 12
                                     font.bold: true
-                                    color: modelData === "เสร็จแล้ว" ? "#166534" : "#92400e"
+                                    color: modelData === "เคสทำเครื่องทดแทน" ? "#4338ca" : "#c2410c"
                                     verticalAlignment: Text.AlignVCenter
                                     leftPadding: 6
                                 }

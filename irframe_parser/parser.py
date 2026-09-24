@@ -77,7 +77,18 @@ def parse_raw(text: str) -> list[dict[str, Any]]:
         joined_text,
         re.IGNORECASE,
     )
-    status = norm(status_match.group(1)) if status_match else "รออะไหล่"
+    if status_match:
+        raw_status = norm(status_match.group(1))
+        if "ทดแทน" in raw_status:
+            status = "เคสทำเครื่องทดแทน"
+        elif "ทัส" in raw_status or "ทัช" in raw_status or "เสีย" in raw_status:
+            status = "เคสทัสสกรีนเสีย"
+        else:
+            status = raw_status
+    elif "ทดแทน" in joined_text:
+        status = "เคสทำเครื่องทดแทน"
+    else:
+        status = "เคสทัสสกรีนเสีย"
 
     # 5. Type
     type_match = re.search(

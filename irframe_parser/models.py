@@ -60,6 +60,19 @@ def _parse_date_tuple(date_str: str) -> tuple[int, int, int]:
     return (int(parts[2]), int(parts[1]), int(parts[0]))
 
 
+def _format_thai_date(iso_date: str) -> str:
+    """Format YYYY-MM-DD into DD/MM/BBBB Thai date string."""
+    if not iso_date or len(iso_date) != 10:
+        return iso_date or ""
+    parts = iso_date.split("-")
+    if len(parts) == 3:
+        try:
+            return f"{int(parts[2]):02d}/{int(parts[1]):02d}/{int(parts[0]) + 543}"
+        except ValueError:
+            pass
+    return iso_date
+
+
 class RecordTableModel(QAbstractTableModel):
     """Table model managing repair records with chronological date sorting and status tracking."""
 
@@ -98,10 +111,14 @@ class RecordTableModel(QAbstractTableModel):
     sortAscendingChanged = Signal(bool)
     selectedCountChanged = Signal(int)
     allSelectedChanged = Signal(bool)
+    currentEntryDateChanged = Signal(str)
+    displayEntryDateChanged = Signal(str)
+    isTodayChanged = Signal(bool)
 
     def __init__(self, connection: sqlite3.Connection, parent: QObject | None = None) -> None:
         super().__init__(parent)
         self.conn = connection
+        self._current_entry_date: str = datetime.date.today().isoformat()
         self._all_records: list[dict[str, Any]] = []
         self._records: list[dict[str, Any]] = []
         self._selected_ids: set[int] = set()
@@ -155,7 +172,7 @@ class RecordTableModel(QAbstractTableModel):
 
     def _reload_records(self) -> None:
         prev_ids = {r["id"] for r in self._all_records} if self._all_records else set()
-        self._all_records = db.list_all(self.conn)
+        self._all_records = db.list_by_entry_date(self.conn, self._current_entry_date)
         new_ids = {r["id"] for r in self._all_records}
 
         if not prev_ids:
@@ -168,18 +185,27 @@ class RecordTableModel(QAbstractTableModel):
         self._emit_stats()
         self.selectedCountChanged.emit(len(self._selected_ids))
         self.allSelectedChanged.emit(self.allSelected)
+        self.currentEntryDateChanged.emit(self._current_entry_date)
+        self.displayEntryDateChanged.emit(self.displayEntryDate)
+        self.isTodayChanged.emit(self.isToday)
 
     def _emit_stats(self) -> None:
         total = len(self._all_records)
         with_sn = sum(1 for r in self._all_records if str(r.get("sn", "")).strip())
         missing_sn = total - with_sn
 
-        # Status summary counts: "รออะไหล่" vs "เสร็จแล้ว"
-        waiting_parts = sum(1 for r in self._all_records if "รอ" in str(r.get("status", "")))
-        completed = sum(1 for r in self._all_records if "เสร็จ" in str(r.get("status", "")))
+        # Status summary counts: "เคสทัสสกรีนเสีย" vs "เคสทำเครื่องทดแทน"
+        touchscreen_broken = sum(
+            1 for r in self._all_records
+            if "ทัส" in str(r.get("status", "")) or "ทัช" in str(r.get("status", "")) or "เสีย" in str(r.get("status", "")) or "รอ" in str(r.get("status", ""))
+        )
+        replacement = sum(
+            1 for r in self._all_records
+            if "ทดแทน" in str(r.get("status", "")) or "เสร็จ" in str(r.get("status", ""))
+        )
 
         self.statsChanged.emit(total, with_sn, missing_sn)
-        self.summaryStatsChanged.emit(total, waiting_parts, completed)
+        self.summaryStatsChanged.emit(total, touchscreen_broken, replacement)
         self.hasMissingSnChanged.emit(missing_sn > 0)
 
     # Properties
@@ -195,10 +221,22 @@ class RecordTableModel(QAbstractTableModel):
     def get_all_selected(self) -> bool:
         return len(self._all_records) > 0 and len(self._selected_ids) == len(self._all_records)
 
+    def get_current_entry_date(self) -> str:
+        return self._current_entry_date
+
+    def get_display_entry_date(self) -> str:
+        return _format_thai_date(self._current_entry_date)
+
+    def get_is_today(self) -> bool:
+        return self._current_entry_date == datetime.date.today().isoformat()
+
     sortColumn = Property(str, get_sort_col, notify=sortColumnChanged)
     sortAscending = Property(bool, get_sort_asc, notify=sortAscendingChanged)
     selectedCount = Property(int, get_selected_count, notify=selectedCountChanged)
     allSelected = Property(bool, get_all_selected, notify=allSelectedChanged)
+    currentEntryDate = Property(str, get_current_entry_date, notify=currentEntryDateChanged)
+    displayEntryDate = Property(str, get_display_entry_date, notify=displayEntryDateChanged)
+    isToday = Property(bool, get_is_today, notify=isTodayChanged)
 
     def rowCount(self, parent: QModelIndex = QModelIndex()) -> int:
         return len(self._records)
@@ -337,24 +375,27 @@ class RecordTableModel(QAbstractTableModel):
 
     @Slot(str)
     def parse_raw(self, text: str) -> None:
-        """Parse raw text and insert into database."""
+        """Parse raw text and insert into database for current entry date."""
         rows = parse_raw_fn(text)
         if not rows:
             return
-        db.insert_many(self.conn, rows)
+        for r in rows:
+            r["entry_date"] = self._current_entry_date
+        db.insert_many(self.conn, rows, entry_date=self._current_entry_date)
         self._reload_records()
 
     @Slot()
     def add_row(self) -> None:
-        """Add a single row."""
+        """Add a single row to current entry date."""
         new_record = {
             "office": "",
             "date": "",
-            "status": "รออะไหล่",
+            "status": "เคสทัสสกรีนเสีย",
             "sn": "",
             "type": "Dell Optiplax 3050 AIO",
+            "entry_date": self._current_entry_date,
         }
-        db.insert_many(self.conn, [new_record])
+        db.insert_many(self.conn, [new_record], entry_date=self._current_entry_date)
         self._reload_records()
 
     @Slot(int)
@@ -365,7 +406,7 @@ class RecordTableModel(QAbstractTableModel):
 
         row_id = self._records[row_idx]["id"]
         db.delete(self.conn, row_id)
-        db.renumber(self.conn)
+        db.renumber(self.conn, self._current_entry_date)
         self._reload_records()
 
     @Slot(int, str, str)
@@ -403,20 +444,57 @@ class RecordTableModel(QAbstractTableModel):
         self._emit_stats()
 
     @Slot()
+    def go_to_previous_day(self) -> None:
+        """Navigate to the previous calendar day."""
+        try:
+            curr_dt = datetime.date.fromisoformat(self._current_entry_date)
+        except ValueError:
+            curr_dt = datetime.date.today()
+        prev_date = (curr_dt - datetime.timedelta(days=1)).isoformat()
+        self.set_entry_date(prev_date)
+
+    @Slot()
+    def go_to_next_day(self) -> None:
+        """Navigate to the next calendar day."""
+        try:
+            curr_dt = datetime.date.fromisoformat(self._current_entry_date)
+        except ValueError:
+            curr_dt = datetime.date.today()
+        next_date = (curr_dt + datetime.timedelta(days=1)).isoformat()
+        self.set_entry_date(next_date)
+
+    @Slot()
+    def go_to_today(self) -> None:
+        """Navigate directly to today."""
+        self.set_entry_date(datetime.date.today().isoformat())
+
+    @Slot(str)
+    def set_entry_date(self, date_str: str) -> None:
+        """Set current entry date and refresh table view."""
+        if not date_str or date_str == self._current_entry_date:
+            return
+        self._current_entry_date = date_str
+        self._reload_records()
+
+    @Slot()
+    def clear_current_page(self) -> None:
+        """Clear all records on the currently active date page."""
+        db.delete_by_entry_date(self.conn, self._current_entry_date)
+        self._reload_records()
+
+    @Slot()
     def load_example(self) -> None:
-        """Load 15 sample records."""
-        for r in self._all_records:
-            db.delete(self.conn, r["id"])
-        db.insert_many(self.conn, INITIAL_RECORDS)
-        db.renumber(self.conn)
+        """Load sample records into the current day."""
+        db.delete_by_entry_date(self.conn, self._current_entry_date)
+        records = [dict(r, entry_date=self._current_entry_date, status="เคสทัสสกรีนเสีย") for r in INITIAL_RECORDS]
+        db.insert_many(self.conn, records, entry_date=self._current_entry_date)
+        db.renumber(self.conn, self._current_entry_date)
         self._reload_records()
 
     @Slot()
     def clear_all(self) -> None:
-        """Clear all records from database."""
-        for r in self._all_records:
-            db.delete(self.conn, r["id"])
-        self._reload_records()
+        """Clear records on current page."""
+        self.clear_current_page()
 
     @Slot(int, bool)
     def set_row_selected(self, row_idx: int, is_selected: bool) -> None:
@@ -436,7 +514,7 @@ class RecordTableModel(QAbstractTableModel):
 
     @Slot(bool)
     def toggle_select_all(self, select: bool) -> None:
-        """Select or deselect all records."""
+        """Select or deselect all records on current page."""
         if select:
             self._selected_ids = {r["id"] for r in self._all_records}
         else:
@@ -451,14 +529,14 @@ class RecordTableModel(QAbstractTableModel):
 
     @Slot(str)
     def export_xlsx(self, file_path: str) -> None:
-        """Export selected records (or all records if none selected) to Excel."""
+        """Export selected records (or all records on current page if none selected) to Excel."""
         from irframe_parser.exporter import export_xlsx
 
         clean_path = QUrl(file_path).toLocalFile() if file_path.startswith("file:") else file_path
         if not clean_path.endswith(".xlsx"):
             clean_path += ".xlsx"
 
-        # Export selected records if any, otherwise fallback to all
+        # Export selected records if any, otherwise fallback to all on current page
         if self._selected_ids:
             rows_to_export = [dict(r) for r in self._all_records if r["id"] in self._selected_ids]
         else:
@@ -472,24 +550,33 @@ class RecordTableModel(QAbstractTableModel):
 
     @Slot(result=list)
     def get_all_records(self) -> list[dict[str, Any]]:
-        """Return all records."""
+        """Return all records for current page."""
         return list(self._records)
 
     @Slot(int, result=int)
-    def check_expired_completed_count(self, days: int = 30) -> int:
-        """Return number of completed records older than `days` days."""
-        return len(db.get_expired_completed_records(self.conn, days))
+    def check_expired_count(self, days: int = 10) -> int:
+        """Return number of records whose entry_date is older than `days` days."""
+        return len(db.get_expired_records(self.conn, days))
 
     @Slot(int, result=list)
-    def get_expired_completed_records(self, days: int = 30) -> list[dict[str, Any]]:
-        """Return expired completed records for displaying in confirmation dialog."""
-        return db.get_expired_completed_records(self.conn, days)
+    def get_expired_records(self, days: int = 10) -> list[dict[str, Any]]:
+        """Return expired records for displaying in confirmation dialog."""
+        return db.get_expired_records(self.conn, days)
 
     @Slot(int, result=int)
-    def confirm_delete_expired(self, days: int = 30) -> int:
-        """Delete expired completed records and refresh table."""
-        deleted = db.delete_expired_completed(self.conn, days)
+    def confirm_delete_expired(self, days: int = 10) -> int:
+        """Delete expired records and refresh table."""
+        deleted = db.delete_expired_records(self.conn, days)
         if deleted > 0:
             self._reload_records()
         return deleted
+
+    # Aliases for backward compatibility
+    @Slot(int, result=int)
+    def check_expired_completed_count(self, days: int = 10) -> int:
+        return self.check_expired_count(days)
+
+    @Slot(int, result=list)
+    def get_expired_completed_records(self, days: int = 10) -> list[dict[str, Any]]:
+        return self.get_expired_records(days)
 

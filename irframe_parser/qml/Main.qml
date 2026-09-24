@@ -39,7 +39,7 @@ ApplicationWindow {
         interval: 450
         repeat: false
         onTriggered: {
-            var count = backendModel.check_expired_completed_count(30)
+            var count = backendModel.check_expired_count(10)
             if (count > 0) {
                 expiredCleanupDialog.expiredCount = count
                 expiredCleanupDialog.open()
@@ -83,14 +83,14 @@ ApplicationWindow {
                 ColumnLayout {
                     spacing: 2
                     Label {
-                        text: "แจ้งเตือนการล้างรายการซ่อมเสร็จ"
+                        text: "แจ้งเตือนการล้างข้อมูลเก่า"
                         font.family: appFontFamily
                         font.bold: true
                         font.pixelSize: 16
                         color: "#0f172a"
                     }
                     Label {
-                        text: "เงื่อนไข: สถานะ 'เสร็จแล้ว' ครบกำหนด 30 วัน"
+                        text: "เงื่อนไข: ข้อมูลบันทึกไว้ครบกำหนด 10 วัน"
                         font.family: appFontFamily
                         font.pixelSize: 12
                         color: "#64748b"
@@ -107,7 +107,7 @@ ApplicationWindow {
             Label {
                 Layout.fillWidth: true
                 wrapMode: Label.WordWrap
-                text: "พบรายการที่มีสถานะ <b>เสร็จแล้ว</b> และครบกำหนด 30 วัน จำนวน <b><font color='#dc2626'>" + expiredCleanupDialog.expiredCount + "</font></b> รายการ\n\nต้องการลบรายการเหล่านี้ออกจากระบบเพื่อลดความซ้ำซ้อนของข้อมูลหรือไม่?"
+                text: "พบข้อมูลที่บันทึกไว้เกิน 10 วัน จำนวน <b><font color='#dc2626'>" + expiredCleanupDialog.expiredCount + "</font></b> รายการ\n\nต้องการลบรายการเหล่านี้ออกจากระบบเพื่อลดความซ้ำซ้อนของข้อมูลหรือไม่?"
                 font.family: appFontFamily
                 font.pixelSize: 13
                 color: "#334155"
@@ -167,8 +167,136 @@ ApplicationWindow {
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
                         onClicked: {
-                            backendModel.confirm_delete_expired(30)
+                            backendModel.confirm_delete_expired(10)
                             expiredCleanupDialog.close()
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Dialog {
+        id: clearPageConfirmDialog
+        modal: true
+        anchors.centerIn: Overlay.overlay
+        width: 480
+        padding: 24
+        dim: true
+        closePolicy: Popup.CloseOnEscape
+        background: Rectangle {
+            color: "#ffffff"
+            radius: 14
+            border.color: "#cbd5e1"
+            border.width: 1
+        }
+
+        contentItem: ColumnLayout {
+            spacing: 16
+
+            RowLayout {
+                spacing: 12
+                Rectangle {
+                    width: 44
+                    height: 44
+                    radius: 22
+                    color: "#fef2f2"
+                    border.color: "#fecaca"
+                    Label {
+                        anchors.centerIn: parent
+                        text: "⚠️"
+                        font.pixelSize: 22
+                    }
+                }
+                ColumnLayout {
+                    spacing: 2
+                    Label {
+                        text: "ยืนยันลบข้อมูลทั้งหมดในหน้านี้"
+                        font.family: appFontFamily
+                        font.bold: true
+                        font.pixelSize: 16
+                        color: "#0f172a"
+                    }
+                    Label {
+                        text: "ลบเฉพาะข้อมูลประจำวันที่ " + backendModel.displayEntryDate
+                        font.family: appFontFamily
+                        font.pixelSize: 12
+                        color: "#64748b"
+                    }
+                }
+            }
+
+            Rectangle {
+                Layout.fillWidth: true
+                Layout.preferredHeight: 1
+                color: "#f1f5f9"
+            }
+
+            Label {
+                Layout.fillWidth: true
+                wrapMode: Label.WordWrap
+                text: "คุณต้องการลบข้อมูลทั้งหมดประจำวันที่ <b>" + backendModel.displayEntryDate + "</b> (จำนวน <b><font color='#dc2626'>" + window.totalCount + "</font></b> รายการ) ออกจากระบบหรือไม่?\n\nข้อมูลของวันอื่นจะไม่ได้รับผลกระทบ"
+                font.family: appFontFamily
+                font.pixelSize: 13
+                color: "#334155"
+                lineHeight: 1.4
+            }
+
+            RowLayout {
+                Layout.fillWidth: true
+                Layout.topMargin: 8
+                spacing: 10
+
+                Item { Layout.fillWidth: true }
+
+                Rectangle {
+                    Layout.preferredWidth: 90
+                    Layout.preferredHeight: 38
+                    radius: 8
+                    color: cancelClearPageMouse.pressed ? "#cbd5e1" : (cancelClearPageMouse.containsMouse ? "#e2e8f0" : "#f1f5f9")
+                    border.color: "#cbd5e1"
+
+                    Label {
+                        anchors.centerIn: parent
+                        text: "ยกเลิก"
+                        font.family: appFontFamily
+                        font.bold: true
+                        font.pixelSize: 13
+                        color: "#475569"
+                    }
+
+                    MouseArea {
+                        id: cancelClearPageMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: clearPageConfirmDialog.close()
+                    }
+                }
+
+                Rectangle {
+                    Layout.preferredWidth: 150
+                    Layout.preferredHeight: 38
+                    radius: 8
+                    color: confirmClearPageMouse.pressed ? "#991b1b" : (confirmClearPageMouse.containsMouse ? "#dc2626" : "#ef4444")
+
+                    Label {
+                        anchors.centerIn: parent
+                        text: "ยืนยันลบหน้านี้"
+                        font.family: appFontFamily
+                        font.bold: true
+                        font.pixelSize: 13
+                        color: "#ffffff"
+                    }
+
+                    MouseArea {
+                        id: confirmClearPageMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            backendModel.clear_current_page()
+                            clearPageConfirmDialog.close()
                         }
                     }
                 }
@@ -453,12 +581,12 @@ ApplicationWindow {
                                     }
                                 }
 
-                                // 2. Waiting Parts Card ("รออะไหล่")
+                                // 2. Touchscreen Broken Card ("ทัสสกรีนเสีย")
                                 Rectangle {
                                     Layout.fillWidth: true
                                     height: 52
-                                    color: window.waitingCount > 0 ? "#fffbeb" : "#ffffff"
-                                    border.color: window.waitingCount > 0 ? "#fde68a" : "#cbd5e1"
+                                    color: window.waitingCount > 0 ? "#fff7ed" : "#ffffff"
+                                    border.color: window.waitingCount > 0 ? "#fed7aa" : "#cbd5e1"
                                     radius: 6
 
                                     ColumnLayout {
@@ -469,25 +597,25 @@ ApplicationWindow {
                                             font.family: appFontFamily
                                             font.bold: true
                                             font.pixelSize: 18
-                                            color: window.waitingCount > 0 ? "#b45309" : "#64748b"
+                                            color: window.waitingCount > 0 ? "#c2410c" : "#64748b"
                                             Layout.alignment: Qt.AlignHCenter
                                         }
                                         Label {
-                                            text: "รออะไหล่"
+                                            text: "ทัสสกรีนเสีย"
                                             font.family: appFontFamily
                                             font.pixelSize: 10
-                                            color: window.waitingCount > 0 ? "#92400e" : "#64748b"
+                                            color: window.waitingCount > 0 ? "#9a3412" : "#64748b"
                                             Layout.alignment: Qt.AlignHCenter
                                         }
                                     }
                                 }
 
-                                // 3. Completed Card ("เสร็จแล้ว")
+                                // 3. Replacement Machine Card ("เครื่องทดแทน")
                                 Rectangle {
                                     Layout.fillWidth: true
                                     height: 52
-                                    color: window.completedCount > 0 ? "#f0fdf4" : "#ffffff"
-                                    border.color: window.completedCount > 0 ? "#bbf7d0" : "#cbd5e1"
+                                    color: window.completedCount > 0 ? "#eef2ff" : "#ffffff"
+                                    border.color: window.completedCount > 0 ? "#c7d2fe" : "#cbd5e1"
                                     radius: 6
 
                                     ColumnLayout {
@@ -498,14 +626,14 @@ ApplicationWindow {
                                             font.family: appFontFamily
                                             font.bold: true
                                             font.pixelSize: 18
-                                            color: window.completedCount > 0 ? "#15803d" : "#64748b"
+                                            color: window.completedCount > 0 ? "#4338ca" : "#64748b"
                                             Layout.alignment: Qt.AlignHCenter
                                         }
                                         Label {
-                                            text: "เสร็จแล้ว"
+                                            text: "เครื่องทดแทน"
                                             font.family: appFontFamily
                                             font.pixelSize: 10
-                                            color: window.completedCount > 0 ? "#166534" : "#64748b"
+                                            color: window.completedCount > 0 ? "#3730a3" : "#64748b"
                                             Layout.alignment: Qt.AlignHCenter
                                         }
                                     }
@@ -529,6 +657,171 @@ ApplicationWindow {
                     anchors.fill: parent
                     anchors.margins: 16
                     spacing: 12
+
+                    // Day Navigation & Page Management Bar (Requirements 3 & 4)
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 8
+
+                        // 1. Previous Day Button
+                        Rectangle {
+                            Layout.preferredWidth: 105
+                            Layout.preferredHeight: 36
+                            radius: 6
+                            color: prevDayMouse.pressed ? "#cbd5e1" : (prevDayMouse.containsMouse ? "#e2e8f0" : "#f1f5f9")
+                            border.color: "#cbd5e1"
+
+                            RowLayout {
+                                anchors.centerIn: parent
+                                spacing: 4
+                                Label { text: "◀"; font.pixelSize: 10; color: "#475569" }
+                                Label {
+                                    text: "วันก่อนหน้า"
+                                    font.family: appFontFamily
+                                    font.bold: true
+                                    font.pixelSize: 12
+                                    color: "#334155"
+                                }
+                            }
+                            MouseArea {
+                                id: prevDayMouse
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: backendModel.go_to_previous_day()
+                            }
+                        }
+
+                        // 2. Date Display Badge
+                        Rectangle {
+                            Layout.preferredHeight: 36
+                            Layout.preferredWidth: 230
+                            radius: 6
+                            color: backendModel.isToday ? "#f0f9ff" : "#f8fafc"
+                            border.color: backendModel.isToday ? "#0284c7" : "#cbd5e1"
+                            border.width: 1.5
+
+                            RowLayout {
+                                anchors.centerIn: parent
+                                spacing: 6
+                                Label { text: "📅"; font.pixelSize: 13 }
+                                Label {
+                                    text: backendModel.displayEntryDate
+                                    font.family: appFontFamily
+                                    font.bold: true
+                                    font.pixelSize: 13
+                                    color: "#0f172a"
+                                }
+                                Rectangle {
+                                    visible: backendModel.isToday
+                                    width: 44
+                                    height: 20
+                                    radius: 10
+                                    color: "#0284c7"
+                                    Label {
+                                        anchors.centerIn: parent
+                                        text: "วันนี้"
+                                        font.family: appFontFamily
+                                        font.pixelSize: 10
+                                        font.bold: true
+                                        color: "#ffffff"
+                                    }
+                                }
+                            }
+                        }
+
+                        // 3. Next Day Button
+                        Rectangle {
+                            Layout.preferredWidth: 95
+                            Layout.preferredHeight: 36
+                            radius: 6
+                            color: nextDayMouse.pressed ? "#cbd5e1" : (nextDayMouse.containsMouse ? "#e2e8f0" : "#f1f5f9")
+                            border.color: "#cbd5e1"
+
+                            RowLayout {
+                                anchors.centerIn: parent
+                                spacing: 4
+                                Label {
+                                    text: "วันถัดไป"
+                                    font.family: appFontFamily
+                                    font.bold: true
+                                    font.pixelSize: 12
+                                    color: "#334155"
+                                }
+                                Label { text: "▶"; font.pixelSize: 10; color: "#475569" }
+                            }
+                            MouseArea {
+                                id: nextDayMouse
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: backendModel.go_to_next_day()
+                            }
+                        }
+
+                        // 4. Quick Return to Today Button
+                        Rectangle {
+                            visible: !backendModel.isToday
+                            Layout.preferredWidth: 95
+                            Layout.preferredHeight: 36
+                            radius: 6
+                            color: todayMouse.pressed ? "#0369a1" : (todayMouse.containsMouse ? "#0284c7" : "#0284c7")
+
+                            Label {
+                                anchors.centerIn: parent
+                                text: "กลับไปวันนี้"
+                                font.family: appFontFamily
+                                font.bold: true
+                                font.pixelSize: 11
+                                color: "#ffffff"
+                            }
+                            MouseArea {
+                                id: todayMouse
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: backendModel.go_to_today()
+                            }
+                        }
+
+                        Item { Layout.fillWidth: true }
+
+                        // 5. Delete All in Current Page Button (Requirement 4)
+                        Rectangle {
+                            Layout.preferredWidth: 140
+                            Layout.preferredHeight: 36
+                            radius: 6
+                            color: clearPageMouse.pressed ? "#b91c1c" : (clearPageMouse.containsMouse ? "#fef2f2" : "#ffffff")
+                            border.color: clearPageMouse.containsMouse ? "#ef4444" : "#fca5a5"
+                            border.width: 1
+
+                            RowLayout {
+                                anchors.centerIn: parent
+                                spacing: 6
+                                Label { text: "🗑️"; font.pixelSize: 12 }
+                                Label {
+                                    text: "ลบข้อมูลในหน้านี้"
+                                    font.family: appFontFamily
+                                    font.bold: true
+                                    font.pixelSize: 12
+                                    color: clearPageMouse.containsMouse ? "#b91c1c" : "#dc2626"
+                                }
+                            }
+                            MouseArea {
+                                id: clearPageMouse
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: clearPageConfirmDialog.open()
+                            }
+                        }
+                    }
+
+                    Rectangle {
+                        Layout.fillWidth: true
+                        height: 1
+                        color: "#f1f5f9"
+                    }
 
                     // Workspace Toolbar with Search, Filter Row (10, 25, 50, All) & Export
                     RowLayout {

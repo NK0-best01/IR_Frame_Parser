@@ -64,7 +64,7 @@ def test_multiple_sn_creates_multiple_rows_shared_fields():
 def test_status_defaults_when_absent():
     text = "สขจ.แพร่\n05/05/69\nSN : CCC3333"
     rows = parse_raw(text)
-    assert rows[0]["status"] == "รออะไหล่"
+    assert rows[0]["status"] == "เคสทัสสกรีนเสีย"
 
 
 def test_type_inferred_from_touchscreen_keyword():
@@ -107,7 +107,7 @@ Epson L5190 SN : X5NY048080
     assert r["date"] == "01/04/2569"
     assert r["office"] == "สาขาอำเภอทองผาภูมิ"
     assert r["type"] == "Epson L5190"
-    assert r["status"] == "รออะไหล่"
+    assert r["status"] == "เคสทัสสกรีนเสีย"
 
 
 def test_item_numbered_sn_does_not_capture_phone_as_model():

@@ -186,5 +186,70 @@ def test_export_only_selected_rows(model, tmp_path):
     assert ws.cell(row=7, column=6).value != "SN-DROP"
 
 
+def test_daily_page_isolation_and_navigation(model):
+    import datetime
+
+    # 1. Today page: Add 2 cases
+    model.parse_raw("SN : TODAY-1\n\nSN : TODAY-2")
+    assert model.rowCount() == 2
+    assert model.data(model.index(0, model.COL_NO), Qt.DisplayRole) == 1
+    assert model.data(model.index(1, model.COL_NO), Qt.DisplayRole) == 2
+
+    # 2. Navigate to previous day (yesterday)
+    model.go_to_previous_day()
+    assert model.rowCount() == 0  # Yesterday has no cases yet
+
+    # 3. Add 1 case to yesterday
+    model.parse_raw("SN : YESTERDAY-1")
+    assert model.rowCount() == 1
+    assert model.data(model.index(0, model.COL_NO), Qt.DisplayRole) == 1  # Sequence starts at 1 for yesterday
+
+    # 4. Navigate back to today
+    model.go_to_today()
+    assert model.rowCount() == 2
+    assert model.data(model.index(0, model.COL_SN), Qt.DisplayRole) == "TODAY-1"
+
+
+def test_clear_current_page_only(model):
+    # Setup: 2 records on today, 1 on previous day
+    model.parse_raw("SN : TODAY-1\n\nSN : TODAY-2")
+    model.go_to_previous_day()
+    model.parse_raw("SN : PREV-1")
+
+    # Clear previous day's page
+    model.clear_current_page()
+    assert model.rowCount() == 0
+
+    # Switch to today -> today's records are intact
+    model.go_to_today()
+    assert model.rowCount() == 2
+    assert model.data(model.index(0, model.COL_SN), Qt.DisplayRole) == "TODAY-1"
+
+
+def test_ticket_date_independent_of_entry_date(model):
+    # Raw ticket date is from last year, parsed today
+    model.parse_raw("วันที่ 10/01/2568\nSN : OLD-TICKET")
+    assert model.rowCount() == 1
+    assert model.data(model.index(0, model.COL_DATE), Qt.DisplayRole) == "10/01/2568"
+    assert model.isToday is True  # Stored in today's entry page!
+
+
+def test_ten_day_expiration(model):
+    # Insert 1 record from 15 days ago, and 1 from 2 days ago
+    db.insert_many(model.conn, [
+        {"sn": "EXPIRED-15D", "entry_date": "2026-01-01"},
+        {"sn": "VALID-2D", "entry_date": "2026-09-22"},
+    ])
+    assert model.check_expired_count(10) == 1
+    expired = model.get_expired_records(10)
+    assert len(expired) == 1
+    assert expired[0]["sn"] == "EXPIRED-15D"
+
+    deleted = model.confirm_delete_expired(10)
+    assert deleted == 1
+    assert model.check_expired_count(10) == 0
+
+
+
 
 
