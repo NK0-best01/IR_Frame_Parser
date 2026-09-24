@@ -186,7 +186,7 @@ ScrollView {
 
                     Rectangle {
                         anchors.right: parent.right
-                        anchors.rightMargin: 10
+                        anchors.rightMargin: 0
                         anchors.bottom: parent.bottom
                         width: 250
                         height: 120

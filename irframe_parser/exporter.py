@@ -136,12 +136,10 @@ def export_xlsx(rows: list[dict[str, Any]], out_path: str) -> None:
         note_cell.alignment = Alignment(horizontal="left", vertical="center")
         current_row += 1
 
-    # Signature Block
+    # Signature Block (Columns 5 to 7 to match table right boundary with complete enclosed border)
     sign_start_row = current_row + 1
-    ws.merge_cells(start_row=sign_start_row, start_column=5, end_row=sign_start_row, end_column=6)
-    ws.merge_cells(start_row=sign_start_row + 1, start_column=5, end_row=sign_start_row + 1, end_column=6)
-    ws.merge_cells(start_row=sign_start_row + 2, start_column=5, end_row=sign_start_row + 2, end_column=6)
-    ws.merge_cells(start_row=sign_start_row + 3, start_column=5, end_row=sign_start_row + 3, end_column=6)
+    start_col = 5
+    end_col = 7
 
     sig_lines = [
         ("ผู้ขอเบิกอุปกรณ์", sign_start_row),
@@ -152,16 +150,19 @@ def export_xlsx(rows: list[dict[str, Any]], out_path: str) -> None:
 
     for text, r_idx in sig_lines:
         ws.row_dimensions[r_idx].height = 24
-        cell = ws.cell(row=r_idx, column=5, value=text)
+        ws.merge_cells(start_row=r_idx, start_column=start_col, end_row=r_idx, end_column=end_col)
+        cell = ws.cell(row=r_idx, column=start_col, value=text)
         cell.font = font_sig
         cell.alignment = align_center
-        cell.border = Border(left=medium, right=medium)
 
-    # Top and bottom borders of signature box
-    ws.cell(row=sign_start_row, column=5).border = Border(top=medium, left=medium, right=medium)
-    ws.cell(row=sign_start_row, column=6).border = Border(top=medium, left=medium, right=medium)
-    ws.cell(row=sign_start_row + 3, column=5).border = Border(bottom=medium, left=medium, right=medium)
-    ws.cell(row=sign_start_row + 3, column=6).border = Border(bottom=medium, left=medium, right=medium)
+        for c_idx in range(start_col, end_col + 1):
+            top_border = medium if r_idx == sign_start_row else None
+            bottom_border = medium if r_idx == sign_start_row + 3 else None
+            left_border = medium if c_idx == start_col else None
+            right_border = medium if c_idx == end_col else None
+            ws.cell(row=r_idx, column=c_idx).border = Border(
+                top=top_border, bottom=bottom_border, left=left_border, right=right_border
+            )
 
     # Freeze top 5 rows
     ws.freeze_panes = "A6"
