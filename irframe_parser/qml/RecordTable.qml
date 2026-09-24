@@ -246,7 +246,7 @@ Item {
                         anchors.left: parent.left
                         anchors.leftMargin: 8
                         anchors.verticalCenter: parent.verticalCenter
-                        text: "ประเภทครุภัณฑ์ / รุ่น" + root.getSortIndicator("type")
+                        text: "เครื่อง/อุปกรณ์" + root.getSortIndicator("type")
                         font.family: appFontFamily
                         font.bold: true
                         font.pixelSize: 13
@@ -595,7 +595,7 @@ Item {
                             rightPadding: 8
                             color: "#334155"
                             selectByMouse: true
-                            placeholderText: "ประเภทครุภัณฑ์"
+                            placeholderText: "เครื่อง/อุปกรณ์"
                             background: Rectangle {
                                 color: typeField.activeFocus ? "#f0f9ff" : "transparent"
                                 border.color: typeField.activeFocus ? "#0284c7" : "transparent"

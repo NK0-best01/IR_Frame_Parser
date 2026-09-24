@@ -84,7 +84,7 @@ class RecordTableModel(QAbstractTableModel):
     COL_TYPE = 5
 
     COL_NAMES = ["no", "office", "date", "status", "sn", "type"]
-    HEADERS = ["ลำดับ", "สนง.", "วันที่รับเคส", "สถานะแจ้งซ่อม", "Serial Number", "ประเภทครุภัณฑ์"]
+    HEADERS = ["ลำดับ", "สนง.", "วันที่รับเคส", "สถานะแจ้งซ่อม", "Serial Number", "เครื่อง/อุปกรณ์"]
 
     NoRole = Qt.UserRole + 1
     OfficeRole = Qt.UserRole + 2

@@ -90,7 +90,7 @@ def export_xlsx(rows: list[dict[str, Any]], out_path: str) -> None:
         ("วันที่รับเคส", 4),
         ("สถานะ\nแจ้งซ่อม", 5),
         ("Serial Number", 6),
-        ("ประเภท\nครุภัณฑ์", 7),
+        ("เครื่อง/\nอุปกรณ์", 7),
     ]
     for text, col_idx in headers:
         cell = ws.cell(row=5, column=col_idx, value=text)

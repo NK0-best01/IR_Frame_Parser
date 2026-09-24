@@ -445,7 +445,7 @@ ApplicationWindow {
 
                             TextArea {
                                 id: rawTextArea
-                                placeholderText: "วางข้อความแจ้งซ่อมจากแชท/ไลน์ที่นี่...\nระบบจะดึงข้อมูล:\n- สนง. / สาขา\n- วันที่รับเคส\n- สถานะแจ้งซ่อม\n- Serial Number (หลาย SN ได้)\n- ประเภทครุภัณฑ์"
+                                placeholderText: "วางข้อความแจ้งซ่อมจากแชท/ไลน์ที่นี่...\nระบบจะดึงข้อมูล:\n- สนง. / สาขา\n- วันที่รับเคส\n- สถานะแจ้งซ่อม\n- Serial Number (หลาย SN ได้)\n- เครื่อง/อุปกรณ์"
                                 font.family: "Consolas"
                                 font.pixelSize: 13
                                 wrapMode: TextArea.Wrap

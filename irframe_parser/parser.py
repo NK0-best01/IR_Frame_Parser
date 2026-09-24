@@ -92,7 +92,7 @@ def parse_raw(text: str) -> list[dict[str, Any]]:
 
     # 5. Type
     type_match = re.search(
-        r"(?:ประเภท(?:ครุภัณฑ์)?|รุ่น|Model)\s*[:：-]?\s*([^\n]+)",
+        r"(?:เครื่อง/อุปกรณ์|ประเภท(?:ครุภัณฑ์)?|รุ่น|Model)\s*[:：-]?\s*([^\n]+)",
         joined_text,
         re.IGNORECASE,
     )

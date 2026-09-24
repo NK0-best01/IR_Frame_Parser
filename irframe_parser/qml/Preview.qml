@@ -91,7 +91,7 @@ ScrollView {
                         Rectangle { width: 1; Layout.fillHeight: true; color: "#64748b" }
                         Label { Layout.preferredWidth: 130; text: "Serial Number"; font.family: appFontFamily; font.bold: true; font.pixelSize: 12; horizontalAlignment: Text.AlignHCenter }
                         Rectangle { width: 1; Layout.fillHeight: true; color: "#64748b" }
-                        Label { Layout.fillWidth: true; text: "ประเภทครุภัณฑ์"; font.family: appFontFamily; font.bold: true; font.pixelSize: 12; horizontalAlignment: Text.AlignHCenter }
+                        Label { Layout.fillWidth: true; text: "เครื่อง/อุปกรณ์"; font.family: appFontFamily; font.bold: true; font.pixelSize: 12; horizontalAlignment: Text.AlignHCenter }
                     }
                 }
 
