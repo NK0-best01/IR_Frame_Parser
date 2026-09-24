@@ -5,3 +5,7 @@ __pycache__/
 .pytest_cache/
 *.db
 *.xlsx
+build/
+dist/
+*.egg-info/
+*.zip

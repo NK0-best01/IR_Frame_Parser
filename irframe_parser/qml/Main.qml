@@ -10,7 +10,7 @@ ApplicationWindow {
     minimumWidth: 1080
     minimumHeight: 680
     visible: true
-    title: "IR Frame Requisition Manager — ระบบจัดการข้อมูลและออกใบเบิก"
+    title: "IR Frame Requisition Manager v1.0.0 — ระบบจัดการข้อมูลและออกใบเบิก"
     color: "#f8fafc"
 
     property int totalCount: 0
